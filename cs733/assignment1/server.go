@@ -118,8 +118,12 @@ func handleClients(con net.Conn) {
 							delete(data, filename)
 							continue
 						}
+						remainDuration := fl.fileExpTime.Sub(curTime)
+						remainingSeconds := int(remainDuration.Seconds())
+						io.WriteString(con, "CONTENTS "+strconv.FormatInt(fl.version, 10)+" "+strconv.Itoa(len(fl.fileContent))+" "+strconv.Itoa(remainingSeconds)+"\r\n")
+					}else {
+						io.WriteString(con, "CONTENTS "+strconv.FormatInt(fl.version, 10)+" "+strconv.Itoa(len(fl.fileContent))+" "+strconv.Itoa(fl.fileLife)+"\r\n")
 					}
-					io.WriteString(con, "CONTENTS "+strconv.FormatInt(fl.version, 10)+" "+strconv.Itoa(len(fl.fileContent))+" "+strconv.Itoa(fl.fileLife)+"\r\n")
 					io.WriteString(con, string(fl.fileContent)+"\r\n")
 				} else {
 					io.WriteString(con, "ERR_FILE_NOT_FOUND\r\n")
