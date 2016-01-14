@@ -69,11 +69,26 @@ func handleClients(con net.Conn) {
 				expiryTime := curTime.Add(duration)
 
 				content := make([]byte, numbytes)
-				n, err := reader.Read(content)
-				if err != nil || n != numbytes {
+				
+				readError := false
+				for i := 1; i <= numbytes; i++ {
+					content[i-1], err = reader.ReadByte();
+					if err != nil {
+						readError = true
+						break
+					}
+				}
+				
+				if readError {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					continue
 				}
+				
+//				n, err := reader.Read(content)
+//				if err != nil || n != numbytes {
+//					io.WriteString(con, "ERR_CMD_ERR\r\n")
+//					continue
+//				}
 
 				_, err = reader.Discard(2) //for \r\n at the end of content
 				if err != nil {
@@ -169,11 +184,25 @@ func handleClients(con net.Conn) {
 				expiryTime := curTime.Add(duration)
 
 				content := make([]byte, numbytes)
-				n, err := reader.Read(content)
-				if err != nil || n != numbytes {
+				readError := false
+				for i := 1; i <= numbytes; i++ {
+					content[i-1], err = reader.ReadByte();
+					if err != nil {
+						readError = true
+						break
+					}
+				}
+				
+				if readError {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					continue
 				}
+				
+//				n, err := reader.Read(content)
+//				if err != nil || n != numbytes {
+//					io.WriteString(con, "ERR_CMD_ERR\r\n")
+//					continue
+//				}
 
 				_, err = reader.Discard(2) //for \r\n at the end of content
 				if err != nil {
