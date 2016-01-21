@@ -387,9 +387,15 @@ func TestCasConcurrently(t *testing.T) {
 	// Write a file
 	fmt.Fprintf(conn, "write %v %v %v\r\n%v\r\n", filename, len(contents), 0, contents)
 
-	_ , _, errr := clientRead(t, reader, "write", "OO")
+	arr , _, errr := clientRead(t, reader, "write", "OO")
 	if errr != "" {
 		t.Error("Error occur in writing the file, error = ", errr)
+	}
+	
+	version := arr[1]
+	_ , err := strconv.Atoi(arr[1]) // parse version as number
+	if err != nil {
+		t.Error("Non-numeric version found")
 	}
 
 	//testing for concurrent cascading of clients on same file
@@ -398,29 +404,31 @@ func TestCasConcurrently(t *testing.T) {
 		defer con1.Close()
 		reader1 := bufio.NewReader(con1)
 		//running concurrent cascading commands
-		go concurrentCasInner(t, con1, reader1, done, filename)
+		go concurrentCasInner(t, con1, reader1, done, filename, version, contents)
 	}
 
 	// Wait for tests to finish
 	for i := 1; i <= 10; i++ {
 		<-done
 	}
-
-}
-
-func concurrentCasInner(t *testing.T, conn net.Conn, reader *bufio.Reader, done chan bool, filename string) {
-
+	
+	//read
 	fmt.Fprintf(conn, "read %v\r\n", filename) // try a read now
-	arr, content, errr := clientRead(t, reader, "read", "READ")
-
+	arr, content, errr := clientRead(t, reader, "read", "LL")
 	if errr != "" {
-		t.Error("Error occur in reading the file, error = ", errr)
+		t.Error("Error occured in reading the file, error = " + errr)
 	}
-	version, err := strconv.Atoi(arr[1]) // parse version as number
+	newVersion := arr[1]
+	_, err = strconv.Atoi(arr[1]) // parse version as number
 	if err != nil {
 		t.Error("Non-numeric version found")
 	}
 
+	expect(t, content, "1")
+	notExpect(t, newVersion, version)
+}
+
+func concurrentCasInner(t *testing.T, conn net.Conn, reader *bufio.Reader, done chan bool, filename string, version string, content string) {
 	value, err := strconv.Atoi(content)
 	if err != nil {
 		t.Error(err.Error())
@@ -431,7 +439,7 @@ func concurrentCasInner(t *testing.T, conn net.Conn, reader *bufio.Reader, done 
 
 	// CAS a file
 	fmt.Fprintf(conn, "cas %v %v %v %v\r\n%v\r\n", filename, version, len(fileContents), "0", fileContents)
-	arr, _, errr = clientRead(t, reader, "cas", "CAS")
+	arr, _, errr := clientRead(t, reader, "cas", "CAS")
 	if errr != "" {
 		expect(t, errr, "ERR_VERSION")
 		_, err := strconv.Atoi(arr[1]) // parse version as number
