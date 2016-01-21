@@ -32,29 +32,36 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 
 	reader := bufio.NewReader(con)
 	for {
-		cmdBytes, isPrefix, err := reader.ReadLine()
+		cmdBytes, isPrefix, err := reader.ReadLine() // read the first line of the input command 
 		if err != nil || isPrefix == true {
 			io.WriteString(con, "ERR_CMD_ERR\r\n")
 			continue
 		}
-		command := string(cmdBytes)
+		
+		command := string(cmdBytes) 
+		if len(command) > 500 { //for invalid command having more number of bytes than expected close the client connection
+			io.WriteString(con, "ERR_CMD_ERR\r\n")
+			con.Close()
+			break
+		}
 		fs := strings.Fields(command)
 
 		if len(fs) >= 2 {
 			switch fs[0] {
 			case "write":
-				if len(fs) < 3 {
+				if len(fs) < 3 { //for invalid command close the connection
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					continue
+					con.Close()
+					break
 				}
 				filename := fs[1]
-				if len(filename) > 250 {
+				if len(filename) > 250 { //for invalid filename close the connection
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
 					break
 				}
 				numbytes, err := strconv.Atoi(fs[2])
-				if err != nil {
+				if err != nil { //for invalid filename close the connection
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
 					break
@@ -74,12 +81,6 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 					}
 				}
 				curTime := time.Now()
-				//				duration, err := time.ParseDuration(strconv.Itoa(expTime) + "s")
-				//				if err != nil {
-				//					io.WriteString(con, "ERR_CMD_ERR\r\n")
-				//					continue
-				//				}
-				//				expiryTime := curTime.Add(duration)
 
 				content := make([]byte, numbytes)
 
@@ -111,17 +112,16 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 					continue
 				}
 
-				if string(tmp) != "\r\n" {
+				if string(tmp) != "\r\n" { //for invalid command close the connection
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
 					break
-					//					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					//					continue
 				}
 
 				var version int64 = 1
 				fileStructData := file{version: version, fileContent: content, fileCreationTime: curTime, fileLife: expTime, expirySpecified: expiryFound}
 				result := make(chan string)
+				//sending structure onto the channel
 				commands <- ChannelCommand{
 					cmdType:    "write",
 					filename:   filename,
@@ -132,7 +132,8 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 			case "read":
 				if len(fs) != 2 {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					continue
+					con.Close()
+					break
 				}
 				filename := fs[1]
 				if len(filename) > 250 { //len(filename) retuens number of bytes in the string
@@ -151,7 +152,8 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 			case "cas":
 				if len(fs) < 4 {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					continue
+					con.Close()
+					break
 				}
 				filename := fs[1]
 				if len(filename) > 250 {
@@ -244,7 +246,8 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 			case "delete":
 				if len(fs) != 2 {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					continue
+					con.Close()
+					break
 				}
 				filename := fs[1]
 				if len(filename) > 250 { //len(filename) retuens number of bytes in the string
@@ -277,9 +280,8 @@ func channelHandler(commands chan ChannelCommand) {
 			var version int64 = 1
 			if fl, found := data[cmd.filename]; found {
 
-				if cmd.fileStruct.expirySpecified {
+				if cmd.fileStruct.expirySpecified { //if the expiry time was specified or if its value was not zero
 					duration := time.Since(fl.fileCreationTime)
-					//					fmt.Printf("seconds %v \r\n", duration.Seconds())
 					if duration.Seconds() > float64(fl.fileLife) { //file has already expired
 						delete(data, cmd.filename)
 						data[cmd.filename] = cmd.fileStruct
@@ -310,16 +312,13 @@ func channelHandler(commands chan ChannelCommand) {
 		case "read":
 			if fl, found := data[cmd.filename]; found {
 				if fl.expirySpecified {
-					//curTime := time.Now()
 					duration := time.Since(fl.fileCreationTime)
-					//					fmt.Printf("seconds %v \r\n", duration.Seconds())
 					if duration.Seconds() > float64(fl.fileLife) { //file has already expired
 						delete(data, cmd.filename)
 						cmd.result <- "ERR_FILE_NOT_FOUND\r\n"
 						continue
 					}
 
-					//remainDuration := fl.fileCreationTime.Sub(curTime)
 					remainingSeconds := fl.fileLife - int(duration.Seconds())
 					cmd.result <- "CONTENTS " + strconv.FormatInt(fl.version, 10) + " " + strconv.Itoa(len(fl.fileContent)) + " " + strconv.Itoa(remainingSeconds) + "\r\n" + string(fl.fileContent) + "\r\n"
 				} else {
@@ -331,15 +330,8 @@ func channelHandler(commands chan ChannelCommand) {
 		case "cas":
 			var fileVersion int64 = 1
 			if fl, found := data[cmd.filename]; found {
-				//				hh, min, ss := cmd.fileStruct.fileCreationTime.Clock()
-				//				fmt.Println("CMD = %v : %v : %v", hh, min, ss)
-				//
-				//				hh, min, ss = fl.fileCreationTime.Clock()
-				//				fmt.Println("old file  = %v : %v : %v", hh, min, ss)
-
 				if cmd.fileStruct.expirySpecified { //file has already expired
 					duration := time.Since(fl.fileCreationTime)
-					//					fmt.Printf("seconds %v \r\n", duration.Seconds())
 					if duration.Seconds() > float64(fl.fileLife) {
 						delete(data, cmd.filename)
 						cmd.result <- "ERR_FILE_NOT_FOUND\r\n"
@@ -366,7 +358,6 @@ func channelHandler(commands chan ChannelCommand) {
 			if fl, found := data[cmd.filename]; found {
 				if fl.expirySpecified {
 					duration := time.Since(fl.fileCreationTime)
-					//					fmt.Printf("seconds %v \r\n", duration.Seconds())
 					if duration.Seconds() > float64(fl.fileLife) { //file has already expired
 						delete(data, cmd.filename)
 						cmd.result <- "ERR_FILE_NOT_FOUND\r\n"

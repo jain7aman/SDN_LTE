@@ -145,6 +145,9 @@ func TestTCPSimple(t *testing.T) {
 
 }
 
+/*
+* This function is test server capabilties to handle load and concurrency
+*/
 func TestServerConcurrently(t *testing.T) {
 	done := make(chan bool, 10)
 
@@ -371,6 +374,11 @@ func routineWork(t *testing.T, conn net.Conn, reader *bufio.Reader, done chan bo
 	done <- true
 }
 
+/*
+* This function runs multiple clients which execute "cas" command on single file
+* only one of the client should be successful in updating the file,
+* others should get ERR_VERSION error
+*/
 func TestCasConcurrently(t *testing.T) {
 	filename := "f1.txt"
 	contents := "0"
@@ -399,7 +407,7 @@ func TestCasConcurrently(t *testing.T) {
 	}
 
 	//testing for concurrent cascading of clients on same file
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 20; i++ {
 		con1 := getConnection(t)
 		defer con1.Close()
 		reader1 := bufio.NewReader(con1)
@@ -408,7 +416,7 @@ func TestCasConcurrently(t *testing.T) {
 	}
 
 	// Wait for tests to finish
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 20; i++ {
 		<-done
 	}
 	
@@ -427,7 +435,10 @@ func TestCasConcurrently(t *testing.T) {
 	expect(t, content, "1")
 	notExpect(t, newVersion, version)
 }
-
+/*
+* This function runs for each concurrent client trying to use cas operation on the same file
+* Only one client will be able to execute the command correctly, others will get VERSION MISMATCH ERROR
+*/
 func concurrentCasInner(t *testing.T, conn net.Conn, reader *bufio.Reader, done chan bool, filename string, version string, content string) {
 	value, err := strconv.Atoi(content)
 	if err != nil {
@@ -511,9 +522,9 @@ func TestCasWritesConcurrently(t *testing.T) {
 			break
 		}
 	}
-	//It tests if the final content of the file is one of last writes or cascades
+	//It tests if the final content of the file is one of last writes or compare and swap
 	if !found {
-		t.Error("Problem in Cascade routines")
+		t.Error("Problem in compare and swap routines")
 	}
 }
 
@@ -642,10 +653,8 @@ func clientRead(t *testing.T, reader *bufio.Reader, cmd string, ff string) (arr 
 		}
 	}
 	if errr != "" {
-		//		fmt.Println("yooo" + errr + "ppppppppppp= " + ff)
 		return arr, "", errr
 	} else {
-		//		fmt.Printf("uuuuuuuu size= %v and content = %v  and pppppppppp= %v \r\n", len(arr), content, ff)
 		return arr, content, ""
 	}
 }
