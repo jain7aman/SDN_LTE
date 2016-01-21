@@ -29,17 +29,20 @@ Once a connection is established one of the commands given in specification belo
 
 ### Specification
 * Write: create a file, or update the file’s contents if it already exists.
-
+```
 write <filename> <numbytes> [<exptime>]\r\n
  <content bytes>\r\n
-
+```
 exptime field is optional, it signifies the time in seconds after which the file on server 
 is suppose to expire. If left unspecified or if its value is set to zero then file does not expires.
 
 The server responds with the following:
 
+```
+
 OK <version>\r\n
 
+```
 where version is a unique 64‐bit number (in decimal format) assosciated with the
 filename.
 
