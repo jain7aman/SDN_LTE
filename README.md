@@ -42,57 +42,66 @@ The server responds with the following:
 
 OK <version>\r\n
 
-```
+``````
 where version is a unique 64‐bit number (in decimal format) assosciated with the
 filename.
 
 * Read: Given a filename, retrieve the corresponding file:
-
+```
 read <filename>\r\n
-
+```
 The server responds with the following format if file is present at the server.
-
+```
 CONTENTS <version> <numbytes> <exptime> \r\n
  <content bytes>\r\n  
-
-Here <exptime> is the remaining time in seconds left for the file after which it will expire. Zero v alue indicates that the file won't expire.
+```
+Here ```<exptime> ```is the remaining time in seconds left for the file after which it will expire. Zero v alue indicates that the file won't expire.
 
 If the file is not present at the server or the file has expired then the server response is:
-
+```
 ERR_FILE_NOT_FOUND\r\n
-
+```
 
 * Compare and swap (cas): This replaces the old file contents with the new content
 provided the version is still the same.
-
+```
 cas <filename> <version> <numbytes> [<exptime>]\r\n
  <content bytes>\r\n
-
+```
 exptime is optional and means the same thing as in "write" command.
 
 The server responds with the new version if successful :-
+```
 OK <version>\r\n
-
+```
 If the file isn't found on the server or the file has expired then server response is:-
+```
 ERR_FILE_NOT_FOUND\r\n
-
+```
 If the version provided in the "cas" command does not match the version of the file, server
 response is:-
+```
 ERR_VERSION <version>\r\n
+```
 
 * Delete file
-
+```
 delete <filename>\r\n
-
+```
 Server response (if successful)
+```
 OK\r\n
+```
 
 If the file isn't found on the server or the file has expired then server response is:-
+```
 ERR_FILE_NOT_FOUND\r\n
+```
 
 Apart from above mentioned errors if the above commands are not specified in proper format as mentioned, then server response is:-
+```
 ERR_CMD_ERR\r\n
-
+```
 After sending the above response to client, server terminates the client connection and thus forcing the client to connect again.
 
 
