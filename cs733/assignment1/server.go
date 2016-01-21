@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+//structure to store file details
 type file struct {
 	version          int64
 	fileContent      []byte
@@ -18,6 +19,8 @@ type file struct {
 	expirySpecified  bool
 }
 
+
+//structure for sending data onto the channel
 type ChannelCommand struct {
 	cmdType    string
 	filename   string
@@ -25,8 +28,13 @@ type ChannelCommand struct {
 	result     chan string
 }
 
+
 const PORT = ":8080"
 
+/*
+* This function parses the clients command and pass it to channelHandler function to serialize 
+* concurrent access to common data structure
+*/
 func handleClients(commands chan ChannelCommand, con net.Conn) {
 	defer con.Close()
 
@@ -48,7 +56,7 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 
 		if len(fs) >= 2 {
 			switch fs[0] {
-			case "write":
+			case "write": //hanldes the write command
 				if len(fs) < 3 { //for invalid command close the connection
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
@@ -68,7 +76,7 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 				}
 				expTime := 0
 				expiryFound := false
-				if len(fs) == 4 {
+				if len(fs) == 4 { //check if the expiry time is specified or not
 					expiryFound = true
 					expTime, err = strconv.Atoi(fs[3])
 					if err != nil || expTime < 0 {
@@ -80,11 +88,12 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 						expiryFound = false
 					}
 				}
-				curTime := time.Now()
 
+				curTime := time.Now() //get the current time
 				content := make([]byte, numbytes)
 
 				readError := false
+				//read the specified number of content bytes
 				for i := 1; i <= numbytes; i++ {
 					content[i-1], err = reader.ReadByte()
 					if err != nil {
@@ -95,7 +104,8 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 
 				if readError {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					continue
+					con.Close()
+					break
 				}
 
 				tmp := make([]byte, 2)
@@ -109,9 +119,10 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 				}
 				if readError {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					continue
+					con.Close()
+					break
 				}
-
+				//next two bytes after the content should be \r\n
 				if string(tmp) != "\r\n" { //for invalid command close the connection
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
@@ -129,7 +140,7 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 					result:     result,
 				}
 				io.WriteString(con, <-result)
-			case "read":
+			case "read": //hanldes the read command
 				if len(fs) != 2 {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
@@ -143,13 +154,13 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 				}
 
 				result := make(chan string)
-				commands <- ChannelCommand{
+				commands <- ChannelCommand{ //sends the data onto the channel
 					cmdType:  "read",
 					filename: filename,
 					result:   result,
 				}
-				io.WriteString(con, <-result)
-			case "cas":
+				io.WriteString(con, <-result) //receive the data from the channel
+			case "cas": //handles compare and swap command
 				if len(fs) < 4 {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
@@ -190,16 +201,9 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 					}
 				}
 				curTime := time.Now()
-				//				duration, err := time.ParseDuration(strconv.Itoa(expTime) + "s")
-				//				if err != nil {
-				//					io.WriteString(con, "ERR_CMD_ERR\r\n")
-				//					continue
-				//				}
-				//				expiryTime := curTime.Add(duration)
-
 				content := make([]byte, numbytes)
 				readError := false
-				for i := 1; i <= numbytes; i++ {
+				for i := 1; i <= numbytes; i++ {//read the specified number of bytes
 					content[i-1], err = reader.ReadByte()
 					if err != nil {
 						readError = true
@@ -209,7 +213,8 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 
 				if readError {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					continue
+					con.Close()
+					break
 				}
 
 				tmp := make([]byte, 2)
@@ -223,27 +228,26 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 				}
 				if readError {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					continue
+					con.Close()
+					break
 				}
-
+				//after content is finished, next two bytes must be \r\n else command is not valid
 				if string(tmp) != "\r\n" {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
 					break
-					//					io.WriteString(con, "ERR_CMD_ERR\r\n")
-					//					continue
 				}
 
 				fileStructData := file{version: fileVersion, fileContent: content, fileCreationTime: curTime, fileLife: expTime, expirySpecified: expiryFound}
 				result := make(chan string)
-				commands <- ChannelCommand{
+				commands <- ChannelCommand{//sends the data onto the channel
 					cmdType:    "cas",
 					filename:   filename,
 					fileStruct: fileStructData,
 					result:     result,
 				}
-				io.WriteString(con, <-result)
-			case "delete":
+				io.WriteString(con, <-result)//receives the data from the channel
+			case "delete": //handles delete command
 				if len(fs) != 2 {
 					io.WriteString(con, "ERR_CMD_ERR\r\n")
 					con.Close()
@@ -257,12 +261,12 @@ func handleClients(commands chan ChannelCommand, con net.Conn) {
 				}
 
 				result := make(chan string)
-				commands <- ChannelCommand{
+				commands <- ChannelCommand{//sends the data onto the channel
 					cmdType:  "delete",
 					filename: filename,
 					result:   result,
 				}
-				io.WriteString(con, <-result)
+				io.WriteString(con, <-result)//reads the data from the channel
 			default:
 				io.WriteString(con, "ERR_CMD_ERR\r\n")
 			}
@@ -276,7 +280,7 @@ func channelHandler(commands chan ChannelCommand) {
 	var data = make(map[string]file)
 	for cmd := range commands {
 		switch cmd.cmdType {
-		case "write":
+		case "write": //handles the write command
 			var version int64 = 1
 			if fl, found := data[cmd.filename]; found {
 
@@ -309,7 +313,7 @@ func channelHandler(commands chan ChannelCommand) {
 				data[cmd.filename] = cmd.fileStruct
 			}
 			cmd.result <- "OK " + strconv.FormatInt(version, 10) + "\r\n"
-		case "read":
+		case "read": //handles the read command
 			if fl, found := data[cmd.filename]; found {
 				if fl.expirySpecified {
 					duration := time.Since(fl.fileCreationTime)
@@ -327,7 +331,7 @@ func channelHandler(commands chan ChannelCommand) {
 			} else {
 				cmd.result <- "ERR_FILE_NOT_FOUND\r\n"
 			}
-		case "cas":
+		case "cas": //handles the compare and swap command
 			var fileVersion int64 = 1
 			if fl, found := data[cmd.filename]; found {
 				if cmd.fileStruct.expirySpecified { //file has already expired
@@ -354,7 +358,7 @@ func channelHandler(commands chan ChannelCommand) {
 				continue
 			}
 			cmd.result <- "OK " + strconv.FormatInt(fileVersion, 10) + "\r\n"
-		case "delete":
+		case "delete": //handles the delete command
 			if fl, found := data[cmd.filename]; found {
 				if fl.expirySpecified {
 					duration := time.Since(fl.fileCreationTime)
@@ -385,11 +389,11 @@ func serverMain() {
 	go channelHandler(commands)
 
 	for {
-		con, err := ls.Accept()
+		con, err := ls.Accept() //accepting the TCP connection
 		if err != nil {
 			log.Fatalln(err)
 		}
-		go handleClients(commands, con)
+		go handleClients(commands, con) //func to parse the client commands and pass its data onto the channel
 	}
 }
 
