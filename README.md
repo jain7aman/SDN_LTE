@@ -4,9 +4,8 @@ First assignment for course CS733, Spring-2015
 Submitted by: Aman Jain, Roll: 143050020
 
 ### Introduction
-* This is a single server for a versioned files to be stored and retrieved by the server 
-* The server is designed in Go language.  
-* The server listens on port 8080.  
+* This is a single server listening on port 8080 for a versioned files to be stored and retrieved by the server 
+* The server is designed in Go language.    
 * It can handle multiple clients concurrently.  
 * Automated testing is provided with Go's testing framework
 
@@ -21,11 +20,10 @@ To run the program only below command is needed (assuming the current directory 
 <br/><code>go test -race</code>
 
 
-### How to use?
+### Usage Instructions
 Run the server by "go run server.go" in one terminal from the assignment1 directory.
-Run "telnet localhost 8080" on a different terminal to connect with the server as a telnet client.
-The server supports multiple client connections by executing same command on different terminals and allows concurrent execution of these clients.
-Once a connection is established one of the commands given in specification below can be run by a user through a client.
+Run "telnet localhost 8080" on a different terminal to connect with the server as a telnet client. Multiple such terminals can be opened
+
 
 ### Specification
 * Write: create a file, or update the file’s contents if it already exists.
@@ -115,9 +113,7 @@ The testing is divided into 2 parts:
 * single client server communication
 * concurrent execution of multiple clients
 
-For a single client server communication all possible scenarios along with corner cases are tested. This program runs serially.
-
-For each of the test cases the client sends a command to the server, reads the response and checks the result with the specified expected result mentioned in the test case.
+For a single client server communication all possible scenarios along with corner cases are tested. This program runs serially. For each of the test cases the client sends a command to the server, reads the response and checks the result with the specified expected result mentioned in the test case.
 
 For concurrent test cases, following test cases are considered:-
 * 20 clients are spawned, out of these 10 clients execute normal routines commands on the file server. Each of these 10 clients operate on different files and write different contents. 
@@ -128,9 +124,9 @@ Each of the other 10 clients performs "write", "read", "cas" and "delete" operat
 * 20 clients are spawned and each of them tries to perform cas operation on the same file. In this only one should succeed and others should get ```ERR_VERSION ``` error.
 
 
-### Programming Details
+### Other Details
 
-* A structure is is used to store values corresponding to the file into a map. Key of map is filename and value is the structure.
+* A structure is used to store values corresponding to the file into a map. Key of map is filename and value is the structure.
 * Channels are used to handle the race conditions created by the concurrent access of clients on the shared data structure.
 * The server accepts connection on port 8080 and for every client handles its connection on a different thread.
 * The command handling is done in a way that if the command format is not proper (like command length should not be greater than 500 bytes), then the connection is closed for the client issuing that command.
