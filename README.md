@@ -125,7 +125,7 @@ Each of the other 10 clients performs "write", "read", "cas" and "delete" operat
 
 * 20 clients are spawned, out of these 10 clients perform write operation and other 10 performs cas operation on the same file in a loop. After their execution is complete, we check contents of the file and match it against the expected response ( which would the content written by any of the clients in their last iteration).
 
-* 10 clients are spawned and each of them tries to perform cas operation on the same file. In this only one should succeed and others should get ERR_VERSION error.
+* 10 clients are spawned and each of them tries to perform cas operation on the same file. In this only one should succeed and others should get ```ERR_VERSION ``` error.
 
 
 ### Programming Details
