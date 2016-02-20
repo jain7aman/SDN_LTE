@@ -1063,8 +1063,23 @@ func expectActions(t *testing.T, actual []Action, expected []Action, detailedAct
 }
 
 func expectState(t *testing.T, a State, b State, testId string) {
+	var expected, actual string
+	if a == FOLLOWER {
+		actual = "FOLLOWER"
+	} else if a == LEADER {
+		actual = "LEADER"
+	} else {
+		actual = "CANDIDATE"
+	}
+	if b == FOLLOWER {
+		expected = "FOLLOWER"
+	} else if b == LEADER {
+		expected = "LEADER"
+	} else {
+		expected = "CANDIDATE"
+	}
 	if a != b {
-		t.Error(fmt.Sprintf("Test ID %v:: Expected State %v, found %v", testId, b, a)) // t.Error is visible when running `go test -verbose`
+		t.Error(fmt.Sprintf("Test ID %v:: Expected State %v, found %v", testId, expected, actual)) // t.Error is visible when running `go test -verbose`
 	}
 }
 
