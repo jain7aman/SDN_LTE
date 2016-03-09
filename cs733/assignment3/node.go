@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"cluster"
 )
 
 type State int
@@ -18,37 +16,16 @@ const (
 )
 
 type Config struct {
-	Cluster          []NetConfig // Information about all servers, including this.
+	cluster          []NetConfig // Information about all servers, including this.
 	Id               int         // This node's id. One of the cluster's entries should match.
 	LogDir           string      // Log file directory for this node
-	ElectionTimeout  uint
-	HeartbeatTimeout uint
+	ElectionTimeout  int
+	HeartbeatTimeout int
 }
 
-func New(config Config) Node {
-
-	config.Cluster = append(config.Cluster, NetConfig{Id:0, Host:"localhost", Port:8080})
-	config.Cluster = append(config.Cluster, NetConfig{Id:1, Host:"localhost", Port:8081})
-	config.Cluster = append(config.Cluster, NetConfig{Id:2, Host:"localhost", Port:8082})
-	config.Cluster = append(config.Cluster, NetConfig{Id:3, Host:"localhost", Port:8083})
-	config.Cluster = append(config.Cluster, NetConfig{Id:4, Host:"localhost", Port:8084})
-	
-	config.Id = 0
-	
-	config.LogDir = "/home/aj/Documents/Distributed/work/src/github.com/jain7aman/cs733/assignment3"
-	
-	config.ElectionTimeout = 10 // some random timeout.. change it later
-	config.HeartbeatTimeout = 20 // some random timeout.. change it later
-	
-	var servers []RaftServer
-	//creates the state machine in follower mode
-	for i := 0; i < 5; i++ {
-		servers = append(servers, &RaftServer{State: FOLLOWER, Id: i, Term: 0, ReceiveChannel: make(chan Event, NumChannels), SendChannel: make(chan Action, NumChannels)})
-	} 
-	
-	for i := 0; i < 5; i++ {
-		servers[i].NodeStart()
-	}
+func New(config Config) RaftServer {
+	sm := RaftServer{State: FOLLOWER, Id: uint(config.Id), Configuration: config, N:uint(len(config.cluster)), Term: 0, ReceiveChannel: make(chan Event, NumChannels), SendChannel: make(chan Action, NumChannels)}
+	return sm
 }
 
 
