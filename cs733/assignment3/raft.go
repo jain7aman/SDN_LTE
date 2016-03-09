@@ -7,7 +7,7 @@ import (
 )
 
 
-func hh(){
+func Initialize(){
 	
 	var config Config
 	var numServers int = 5
