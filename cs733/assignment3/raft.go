@@ -1,23 +1,22 @@
 package main
 
 import (
+	"math/rand"
 	"strconv"
 	"time"
-	"math/rand"
 )
 
+func Initialize() {
 
-func Initialize(){
-	
 	var config Config
 	var numServers int = 5
 	var startingPort int = 8080
 	servers := make([]RaftServer, numServers)
 	s1 := rand.NewSource(time.Now().UnixNano())
-    r1 := rand.New(s1)
-	
+	r1 := rand.New(s1)
+
 	for i := 0; i < numServers; i++ {
-		config.cluster = append(config.cluster, NetConfig{Id:i, Host:"localhost", Port:startingPort})
+		config.cluster = append(config.cluster, NetConfig{Id: i, Host: "localhost", Port: startingPort})
 		config.Id = i
 		config.LogDir = "server_" + strconv.Itoa(i) + "_log"
 		config.ElectionTimeout = r1.Intn(100)
@@ -25,10 +24,9 @@ func Initialize(){
 		startingPort++
 		servers[i] = New(config)
 	}
-	
+
 	for i := 0; i < 5; i++ {
 		go servers[i].NodeStart()
 	}
 
 }
-

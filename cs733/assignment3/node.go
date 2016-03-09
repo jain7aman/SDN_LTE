@@ -7,6 +7,7 @@ import (
 type State int
 
 var NumChannels uint = 20
+
 //var RandomWaitTime uint = 4
 
 const (
@@ -24,11 +25,9 @@ type Config struct {
 }
 
 func New(config Config) RaftServer {
-	sm := RaftServer{State: FOLLOWER, Id: uint(config.Id), Configuration: config, N:uint(len(config.cluster)), Term: 0, ReceiveChannel: make(chan Event, NumChannels), SendChannel: make(chan Action, NumChannels)}
+	sm := RaftServer{State: FOLLOWER, Id: uint(config.Id), Configuration: config, N: uint(len(config.cluster)), Term: 0, ReceiveChannel: make(chan Event, NumChannels), SendChannel: make(chan Action, NumChannels)}
 	return sm
 }
-
-
 
 type NetConfig struct {
 	Id   int
