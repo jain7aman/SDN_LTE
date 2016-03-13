@@ -1,14 +1,19 @@
 package main
 
+import (
+	"log"
+)
+
 func (sm *RaftServer) follower() State {
 	//Step 1: sets a random timer for the timeout event of follower
-	sm.SendChannel <- Alarm{Time: sm.Configuration.ElectionTimeout} //sleep for RANDOM time
+	sm.SendChannel <- Alarm{Time: uint(sm.ElectionTimeout)} //sleep for RANDOM time
 
 	//Step 2: loops through the events being received from event channel
 	//	event := <-sm.ReceiveChannel
 	for event := range sm.ReceiveChannel {
 		switch event.(type) {
 		case TimeoutEvent:
+			log.Printf("** FOLLOWER ** Server ID = %v  Term = %v and event = %v \n", sm.Id(), sm.Term, event.(TimeoutEvent).getEventName())
 			sm.Term++ //increments the term number
 			sm.VotedFor = -1
 			sm.SendChannel <- StateStore{Term: sm.Term, VotedFor: sm.VotedFor}
@@ -16,12 +21,13 @@ func (sm *RaftServer) follower() State {
 			return CANDIDATE //returns to CANDIDATE state
 
 		case VoteReqEvent:
+			log.Printf("** FOLLOWER ** Server ID = %v  Term = %v and event = %v \n", sm.Id(), sm.Term, event.(VoteReqEvent).getEventName())
 			//Step 1: reset the timer for Timeout event, as the network is alive
-			sm.SendChannel <- Alarm{Time: sm.Configuration.ElectionTimeout} //sleep for RANDOM time
+			sm.SendChannel <- Alarm{Time: uint(sm.ElectionTimeout)} //sleep for RANDOM time
 
 			msg := event.(VoteReqEvent)
 			if sm.Term > msg.Term {
-				sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.Id, Term: sm.Term, VoteGranted: false}}
+				sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.ID, Term: sm.Term, VoteGranted: false}}
 				sm.SendChannel <- NoAction{}
 				//continue
 			} else {
@@ -43,18 +49,18 @@ func (sm *RaftServer) follower() State {
 					if termChanged == true {
 						sm.SendChannel <- StateStore{Term: sm.Term, VotedFor: sm.VotedFor}
 					}
-					sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.Id, Term: sm.Term, VoteGranted: false}} // Reject the Vote
+					sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.ID, Term: sm.Term, VoteGranted: false}} // Reject the Vote
 				} else {
 					if sm.VotedFor == -1 || sm.VotedFor == int(msg.CandidateId) {
 						sm.VotedFor = int(msg.CandidateId)
 						sm.SendChannel <- StateStore{Term: sm.Term, VotedFor: sm.VotedFor}
-						sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.Id, Term: sm.Term, VoteGranted: true}} // Give the Vote
+						sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.ID, Term: sm.Term, VoteGranted: true}} // Give the Vote
 					} else {
 						if termChanged == true {
 							sm.VotedFor = -1
 							sm.SendChannel <- StateStore{Term: sm.Term, VotedFor: sm.VotedFor}
 						}
-						sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.Id, Term: sm.Term, VoteGranted: false}} // Already voted for other, Reject the Vote
+						sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.ID, Term: sm.Term, VoteGranted: false}} // Already voted for other, Reject the Vote
 					}
 				}
 
@@ -64,37 +70,43 @@ func (sm *RaftServer) follower() State {
 				//				if termChanged == true {
 				//					sm.SendChannel <- StateStore{Term: sm.Term, VotedFor: sm.VotedFor}
 				//				}
-				//				sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.Id, Term: sm.Term, VoteGranted: true}} // Give the Vote
+				//				sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.ID, Term: sm.Term, VoteGranted: true}} // Give the Vote
 				//			} else {
 				//				if termChanged == true {
 				//					sm.SendChannel <- StateStore{Term: sm.Term, VotedFor: sm.VotedFor}
 				//				}
-				//				sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.Id, Term: sm.Term, VoteGranted: false}} // Reject the Vote
+				//				sm.SendChannel <- Send{msg.CandidateId, VoteRespEvent{Id: sm.ID, Term: sm.Term, VoteGranted: false}} // Reject the Vote
 				//			}
 				sm.SendChannel <- NoAction{}
 			}
 
 		case AppendEntriesReqEvent:
+			log.Printf("** FOLLOWER ** Server ID = %v  Term = %v and event = %v \n", sm.Id(), sm.Term, event.(AppendEntriesReqEvent).getEventName())
 			msg := event.(AppendEntriesReqEvent)
 
 			if msg.Term < sm.Term { //Followers term is greater than leader's term
-				sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: false, FollowerId: sm.Id, FollowerIndex: (len(sm.Log) - 1)}} //Leader is old and not uptodate
+				sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: false, FollowerId: sm.ID, FollowerIndex: (len(sm.Log) - 1)}} //Leader is old and not uptodate
 				sm.SendChannel <- NoAction{}
 				// continue //continue the events loop
 			} else {
-
 				if msg.Term > sm.Term {
 					sm.Term = msg.Term
 					sm.VotedFor = -1
 					sm.SendChannel <- StateStore{Term: sm.Term, VotedFor: sm.VotedFor}
 				}
-
+				
 				// Reset the timer for Timeout event, as the network is alive
-				sm.SendChannel <- Alarm{Time: sm.Configuration.ElectionTimeout} //sleep for RANDOM time
+				sm.SendChannel <- Alarm{Time: uint(sm.ElectionTimeout)} //sleep for RANDOM time
+				
+				if len(msg.Entries) == 0 { // heart beat message
+					sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: true, FollowerId: sm.ID, FollowerIndex: (len(sm.Log) - 1)}} //Leader is old and not uptodate
+					sm.SendChannel <- NoAction{}
+					continue
+				}
 
 				// If length of log is smaller at follower then its previous log index wont match with the prevLogIndex of Leader
 				if len(sm.Log)-1 < msg.PrevLogIndex {
-					sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: false, FollowerId: sm.Id, FollowerIndex: (len(sm.Log) - 1)}}
+					sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: false, FollowerId: sm.ID, FollowerIndex: (len(sm.Log) - 1)}}
 					sm.SendChannel <- NoAction{}
 					//			continue //continue the events loop
 				} else {
@@ -103,7 +115,7 @@ func (sm *RaftServer) follower() State {
 					if len(sm.Log) > 0 {
 						//Reply false if log doesn't contain an entry at prevLogIndex whose term matches prevLogIndex
 						if sm.Log[msg.PrevLogIndex].Term != msg.PrevLogTerm {
-							sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: false, FollowerId: sm.Id, FollowerIndex: (len(sm.Log) - 1)}}
+							sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: false, FollowerId: sm.ID, FollowerIndex: (len(sm.Log) - 1)}}
 							termMatch = false
 							sm.SendChannel <- NoAction{}
 							//continue //continue the events loop
@@ -129,19 +141,22 @@ func (sm *RaftServer) follower() State {
 							//set commit index = min(leaderCommit, index of last new entry)
 							sm.CommitIndex = minimum(msg.LeaderCommit, len(sm.Log)-1)
 						}
-						sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: true, FollowerId: sm.Id, FollowerIndex: (len(sm.Log) - 1)}} //send a success response back to leader
+						sm.SendChannel <- Send{msg.LeaderId, AppendEntriesRespEvent{Term: sm.Term, Success: true, FollowerId: sm.ID, FollowerIndex: (len(sm.Log) - 1)}} //send a success response back to leader
 						sm.SendChannel <- NoAction{}
 					}
 				}
 			}
+
 		case AppendEvent:
+			log.Printf("** FOLLOWER ** Server ID = %v  Term = %v and event = %v \n", sm.Id(), sm.Term, event.(AppendEvent).getEventName())
 			//if a client contacts a follower, the follower redirects it to the leader
 			msg := event.(AppendEvent)
 			//Send a response back to client saying that I am not the Leader and giving client the leader ID to contact to
-			sm.SendChannel <- Commit{Data: msg.Command, Err: &AppendError{LeaderId: sm.LeaderId, Prob: "ERR_REDIRECTION"}} //send a success response back to leader
+			sm.SendChannel <- Commit{Data: msg.Command, Err: &AppendError{LeaderId: sm.LeaderID, Prob: "ERR_REDIRECTION"}} //send a success response back to leader
 			sm.SendChannel <- NoAction{}
 
 		case AppendEntriesRespEvent:
+			log.Printf("** FOLLOWER ** Server ID = %v  Term = %v and event = %v \n", sm.Id(), sm.Term, event.(AppendEntriesRespEvent).getEventName())
 			msg := event.(AppendEntriesRespEvent)
 			if msg.Term > sm.Term { //Followers term is greater than my term
 				sm.Term = msg.Term
@@ -151,6 +166,7 @@ func (sm *RaftServer) follower() State {
 			sm.SendChannel <- NoAction{}
 
 		case VoteRespEvent:
+			log.Printf("** FOLLOWER ** Server ID = %v  Term = %v and event = %v \n", sm.Id(), sm.Term, event.(VoteRespEvent).getEventName())
 			msg := event.(VoteRespEvent)
 			if msg.Term > sm.Term { //Followers term is greater than my term
 				sm.Term = msg.Term
