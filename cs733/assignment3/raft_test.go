@@ -41,8 +41,7 @@ func Test_MultipleLeaderFailures(t *testing.T) {
 	if leader3 == leader2 || leader3 == leader1 {
 		log.Fatal("No new leader elected")
 	}
-	//tool cover -html=coverage.out
-	//test -v -gcflags "-N -l" ss  -coverprofile=coverage.out
+
 	// Third Leader Failure, no new leader should get elected
 	ldr.Shutdown()
 	// waits for leader to get elected

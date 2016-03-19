@@ -665,12 +665,6 @@ func minimum(x int, y int) int {
 	return y
 }
 
-func assert(val bool) {
-	if !val {
-		panic("Assertion Failed")
-	}
-}
-
 func createIntArray(N int, initialValue int) []int {
 	var tmpArray []int
 	for i := 0; i < N; i++ {
