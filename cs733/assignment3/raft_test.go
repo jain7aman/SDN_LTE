@@ -8,14 +8,66 @@ import (
 	"time"
 )
 
+/*
+* In this test case we test the scenario in which leader machine shuts down, then new leader is elected from remaining servers.
+* After some time second leader also fails, leaving the number of servers to be 3. Now also, new leader should get elected, which is
+* eventually shut down, leaving the number of servers to be just 2. Now no new leader should get elected.
+ */
+func Test_MultipleLeaderFailures(t *testing.T) {
+	// delete previous logs, if any
+	deleteLogs(5)
+	rafts := makeRafts("Cluster_config3.json") // array of []raft.Node
+
+	ldr := getLeader(rafts)
+	leader1 := ldr.Id()
+	ldr.Append([]byte("Msg_ID:1@@Command1"))
+
+	// First Leader Failure, new leader should get elected
+	ldr.Shutdown()
+
+	ldr = getLeader(rafts)
+	leader2 := ldr.Id()
+
+	if leader1 == leader2 {
+		log.Fatal("No new leader elected")
+	}
+
+	// Second Leader Failure, new leader should get elected
+	ldr.Shutdown()
+
+	ldr = getLeader(rafts)
+	leader3 := ldr.Id()
+
+	if leader3 == leader2 || leader3 == leader1 {
+		log.Fatal("No new leader elected")
+	}
+	//tool cover -html=coverage.out
+	//test -v -gcflags "-N -l" ss  -coverprofile=coverage.out
+	// Third Leader Failure, no new leader should get elected
+	ldr.Shutdown()
+	// waits for leader to get elected
+	time.Sleep(3 * time.Second)
+
+	ldr = checkLeader(rafts)
+
+	if ldr.Id() != -1 {
+		log.Fatal("No new leader should have been elected, leader1 = %v leader2 = %v leader3 = %v leader4 = %v", leader1, leader2, leader3, ldr.Id())
+	}
+
+	for i := 0; i < len(rafts); i++ {
+		if i+1 != leader1 && i+1 != leader2 && i+1 != leader3 {
+			rafts[i].(*RaftServer).Shutdown()
+		}
+		rafts[i].(*RaftServer).ClearLogs()
+	}
+}
 
 /*
 * This test case tests the replication of a single message in a failure-free case.
 * It inserts a message using leader.Append, and expects to see it show up all raft
 * nodes’ commit channels.
 * test -c -v -gcflags "-N -l" ./...
-*/
-
+ */
 func Test_Append(t *testing.T) {
 	// delete previous logs, if any
 	deleteLogs(5)
@@ -33,11 +85,10 @@ func Test_Append(t *testing.T) {
 	//time.Sleep(3 * time.Second)
 }
 
-
 /*
 * This method checks the response of Candidate to Append entry request by a client.
 * We should receive Error response on COmmit Channel
-*/
+ */
 func Test_CandidateAppendEntries(t *testing.T) {
 	// delete previous logs, if any
 	deleteLogs(5)
@@ -64,14 +115,10 @@ func Test_CandidateAppendEntries(t *testing.T) {
 
 }
 
-
-
-
 /*
 * Here we shutdown a leader so new leader gets elected and then we wake up the old leader
 * after some time state of old leader should not remain LEADER
  */
-
 func Test_LeaderReincarnation(t *testing.T) {
 	// delete previous logs, if any
 	deleteLogs(5)
@@ -107,8 +154,8 @@ func Test_LeaderReincarnation(t *testing.T) {
 	// now two leaders in the system
 	// old leader should step down to follower
 	numLeaders := getNumberOfLeaders(rafts)
-	
-	if numLeaders != 1 {
+
+	if numLeaders > 1 {
 		log.Fatal("Old leader still active, should have abdicated the throne, numLeaders = ", numLeaders)
 	}
 
@@ -122,74 +169,14 @@ func Test_LeaderReincarnation(t *testing.T) {
 	ldr.ClearLogs()
 }
 
-
-/*
-* In this test case we test the scenario in which leader machine shuts down, then new leader is elected from remaining servers.
-* After some time second leader also fails, leaving the number of servers to be 3. Now also, new leader should get elected, which is
-* eventually shut down, leaving the number of servers to be just 2. Now no new leader should get elected.
- */
-
-func Test_MultipleLeaderFailures(t *testing.T) {
-	// delete previous logs, if any
-	deleteLogs(5)
-	rafts := makeRafts("Cluster_config1.json") // array of []raft.Node
-
-	ldr := getLeader(rafts)
-	leader1 := ldr.Id()
-	ldr.Append([]byte("Msg_ID:1@@Command1"))
-
-	// First Leader Failure, new leader should get elected
-	ldr.Shutdown()
-
-	ldr = getLeader(rafts)
-	leader2 := ldr.Id()
-
-	if leader1 == leader2 {
-		log.Fatal("No new leader elected")
-	}
-
-	// Second Leader Failure, new leader should get elected
-	ldr.Shutdown()
-
-	ldr = getLeader(rafts)
-	leader3 := ldr.Id()
-
-	if leader3 == leader2 || leader3 == leader1 {
-		log.Fatal("No new leader elected")
-	}
-//tool cover -html=coverage.out
-//test -v -gcflags "-N -l" ss  -coverprofile=coverage.out
-	// Third Leader Failure, no new leader should get elected
-	ldr.Shutdown()
-	// waits for leader to get elected
-	time.Sleep(3 * time.Second)
-
-	ldr = checkLeader(rafts)
-
-	if ldr.Id() != -1 {
-		log.Fatal("No new leader should have been elected, leader1 = %v leader2 = %v leader3 = %v leader4 = %v", leader1, leader2, leader3, ldr.Id())
-	}
-
-	for i := 0; i < len(rafts); i++ {
-		if i+1 != leader1 && i+1 != leader2 && i+1 != leader3 {
-			rafts[i].(*RaftServer).Shutdown()
-		}
-		rafts[i].(*RaftServer).ClearLogs()
-	}
-}
-
-
-
-
 /*
 * This method checks the response of follower ( who previously was a leader ) to Append entry request by a client.
 * We should receive Error response on COmmit Channel
  */
-
 func Test_FollowerAppendEntries(t *testing.T) {
 	// delete previous logs, if any
 	deleteLogs(5)
-	rafts := makeRafts("Cluster_config2.json") // array of []raft.Node
+	rafts := makeRafts("Cluster_config4.json") // array of []raft.Node
 
 	oldLdr := getLeader(rafts)
 	leader1 := oldLdr.Id()
@@ -213,7 +200,7 @@ func Test_FollowerAppendEntries(t *testing.T) {
 	}
 
 	// lets bring old leader back to life
-	oldLdr = reviveServer(oldLdr.Id(), "Cluster_config1.json")
+	oldLdr = reviveServer(oldLdr.Id(), "Cluster_config4.json")
 	oldLdr.State = LEADER // change the state from POWEROFF to LEADER
 	go oldLdr.NodeStart()
 	time.Sleep(3 * time.Second)
@@ -251,8 +238,7 @@ func Test_FollowerAppendEntries(t *testing.T) {
 * Leader of unpartitioned configuration is in minority parition1 (size = 2). So new leader will be elected in majority partition1 (size = 3)
 * We HEAL the parition. Now two leaders in the system, at last there should be only one leader that too of partition1,
 * because its term would be higher
-*/
-
+ */
 func Test_Partition1(t *testing.T) {
 	// delete previous logs, if any
 	deleteLogs(5)
@@ -316,8 +302,7 @@ func Test_Partition1(t *testing.T) {
 * So check that the new leader should not be any one of the minority partition2 servers (as their logs are not updated)
 * After new leader ( any server from majority partition1) got elected, then the followers of minority partiton should cach up with the log of leader
 * and after some time their log should be identical with leader's log
-*/
-
+ */
 func Test_Partition2(t *testing.T) {
 	// delete previous logs, if any
 	deleteLogs(5)
@@ -444,109 +429,6 @@ func Test_Partition2(t *testing.T) {
 		rafts[i].(*RaftServer).ClearLogs()
 	}
 }
-
-
-/*
-func Test_FollowerReincarnation(t *testing.T) {
-	rafts := makeRafts("Cluster_config2.json") // array of []raft.Node
-
-	ldr := getLeader(rafts)
-	ldr.Append([]byte("Msg_ID:1@@Command1"))
-	time.Sleep(1 * time.Second)
-	checkReplication(t, rafts, "Msg_ID:1@@Command1", "Test_FollowerReincarnation")
-
-
-
-	// getting a follower and shutting it down
-	folw := getAFollower(rafts, ldr.Id())
-	log.Printf("Leader Id = %v and Follower id = %v length of leades log = %v len of folw log = %v \n", ldr.Id(), folw.Id(), len(ldr.Log), len(folw.Log))
-	folw.Shutdown()
-	time.Sleep(1 * time.Second)
-
-	if folw.State != POWEROFF {
-		log.Fatal("Follower should have shutdown down by now")
-	}
-
-
-
-	cnt := 0
-	tmpRafts := make([]Node, len(rafts)-1)
-	for i := 0; i < len(rafts); i++ {
-		if i+1 != folw.Id() {
-			tmpRafts[cnt] = rafts[i]
-			cnt++
-		}
-	}
-//	Debug = true
-	ldr.Append([]byte("Msg_ID:2@@Command2"))
-	time.Sleep(1 * time.Second)
-	checkReplication(t, tmpRafts, "Msg_ID:2@@Command2", "Test_FollowerReincarnation2")
-
-	ldr.Append([]byte("Msg_ID:3@@Command3"))
-	time.Sleep(1 * time.Second)
-	checkReplication(t, tmpRafts, "Msg_ID:3@@Command3", "Test_FollowerReincarnation3")
-
-	ldr.Append([]byte("Msg_ID:4@@Command4"))
-	time.Sleep(1 * time.Second)
-	checkReplication(t, tmpRafts, "Msg_ID:4@@Command4", "Test_FollowerReincarnation4")
-
-	log.Printf("**Leader Id = %v and Follower id = %v length of leaders log = %v length of folw log = %v \n", getLeader(rafts).Id(), folw.Id(), len(ldr.Log), len(folw.Log))
-	//shuts down everything
-	for i := 0; i < len(rafts); i++ {
-		if i+1 != folw.Id() {
-			rafts[i].(*RaftServer).Shutdown()
-		}
-	}
-
-	Debug = true
-//	// brings back leader
-	ldr = reviveServer(ldr.Id(), "Cluster_config1.json")
-	ldr.State = LEADER // change the state from POWEROFF to LEADER
-	go ldr.NodeStart()
-	time.Sleep(3 * time.Second)
-
-	//time to revive the lost follower
-	folw = reviveServer(folw.Id(), "Cluster_config1.json")
-	go folw.NodeStart()
-
-//	var sm *RaftServer
-//	// brings back followers
-//	for i := 0; i < len(rafts); i++ {
-//		if i+1 != ldr.Id() &&  i+1 != folw.Id() {
-//			sm = reviveServer(i+1, "Cluster_config2.json")
-//			go folw.NodeStart()
-//		}
-//	}
-
-	time.Sleep(3 * time.Second)
-
-	if len(folw.Log) == 4 {
-		for i := 1; i <= 4; i++ {
-			msg := string(folw.Log[i-1].Command)
-			switch i {
-			case 1:
-				if msg != "Msg_ID:1@@Command1" {
-					log.Fatal("expected Msg_ID:1@@Command1 found = ", msg)
-				}
-			case 2:
-				if msg != "Msg_ID:2@@Command2" {
-					log.Fatal("expected Msg_ID:2@@Command2 found = ", msg)
-				}
-			case 3:
-				if msg != "Msg_ID:3@@Command3" {
-					log.Fatal("expected Msg_ID:3@@Command3 found = ", msg)
-				}
-			case 4:
-				if msg != "Msg_ID:4@@Command4" {
-					log.Fatal("expected Msg_ID:4@@Command4 found = ", msg)
-				}
-			}
-		}
-	}else{
-		log.Fatal("Follower log should be up to date by now, length of folw log \n", len(folw.Log))
-	}
-}
-*/
 
 func checkReplication(t *testing.T, rafts []Node, expectedMsg string, testId string) {
 	for i := 0; i < len(rafts); i++ {

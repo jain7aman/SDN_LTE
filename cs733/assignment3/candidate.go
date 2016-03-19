@@ -228,7 +228,7 @@ func (sm *RaftServer) candidate() State {
 			}
 
 		case ShutDownEvent:
-//			msg := event.(ShutDownEvent)
+			//			msg := event.(ShutDownEvent)
 			sm.SendChannel <- Alarm{Time: HighTimeout} // remove the timer
 			sm.QuitChannel <- true
 			//			if Debug {

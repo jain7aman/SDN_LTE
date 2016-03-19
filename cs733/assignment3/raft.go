@@ -5,7 +5,7 @@ import (
 	"github.com/cs733-iitb/cluster"
 	"github.com/cs733-iitb/cluster/mock"
 	diskLog "github.com/cs733-iitb/log"
-//	"log"
+	//	"log"
 	"math/rand"
 	"strconv"
 	"time"
@@ -58,13 +58,13 @@ func InitializeMocks(configFile string) (*mock.MockCluster, []Node) {
 
 func makeMockRafts(configFile string) (*mock.MockCluster, []Node) {
 	c1, nodes := InitializeMocks(configFile)
-//	if Debug {
-//		log.Printf("Registering Events")
-//	}
+	//	if Debug {
+	//		log.Printf("Registering Events")
+	//	}
 	RegisterEvents()
-//	if Debug {
-//		log.Printf("Starting channels")
-//	}
+	//	if Debug {
+	//		log.Printf("Starting channels")
+	//	}
 	for i := 0; i < len(nodes); i++ {
 		go handleChannels(nodes[i].(*RaftServer))
 	}
@@ -75,13 +75,13 @@ func makeMockRafts(configFile string) (*mock.MockCluster, []Node) {
 func makeRafts(configFile string) []Node {
 	//	done := make(chan bool, 1)
 	nodes := Initialize(configFile)
-//	if Debug {
-//		log.Printf("Registering Events")
-//	}
+	//	if Debug {
+	//		log.Printf("Registering Events")
+	//	}
 	RegisterEvents()
-//	if Debug {
-//		log.Printf("Starting channels")
-//	}
+	//	if Debug {
+	//		log.Printf("Starting channels")
+	//	}
 	for i := 0; i < len(nodes); i++ {
 		go handleChannels(nodes[i].(*RaftServer))
 	}
@@ -92,6 +92,7 @@ func makeRafts(configFile string) []Node {
 func main() {
 
 }
+
 /*
 func mmain() {
 	done := make(chan bool, 1)
@@ -111,7 +112,7 @@ func mmain() {
 	done <- true
 
 	<-done
-	
+
 //		if Debug {
 //				log.Printf("Starting channels")}
 //
@@ -165,7 +166,7 @@ func mmain() {
 //				log.Printf("DONE\n")}
 //
 //		<-done
-	
+
 }
 */
 func getACandidate(nodes []Node) *RaftServer {
@@ -221,9 +222,9 @@ func checkLeader(nodes []Node) *RaftServer {
 }
 
 func handleChannels(sm *RaftServer) {
-//	if Debug {
-//		log.Printf(" id = %v method ElectionTimeout = %v HeartbeatTimeout = %v \n", sm.Id(), sm.ElectionTimeout, sm.HeartbeatTimeout)
-//	}
+	//	if Debug {
+	//		log.Printf(" id = %v method ElectionTimeout = %v HeartbeatTimeout = %v \n", sm.Id(), sm.ElectionTimeout, sm.HeartbeatTimeout)
+	//	}
 	done := false
 	for {
 		select {
@@ -238,9 +239,9 @@ func handleChannels(sm *RaftServer) {
 			break
 		}
 		if done {
-//			if Debug {
-//				log.Printf("Stopping Handling routines of Server = %v \n", sm.Id())
-//			}
+			//			if Debug {
+			//				log.Printf("Stopping Handling routines of Server = %v \n", sm.Id())
+			//			}
 			break
 		}
 	}
@@ -301,9 +302,9 @@ func handleActions(sm *RaftServer, act Action) {
 	switch act.(type) {
 	case Alarm:
 		alarmAction := act.(Alarm)
-//		if Debug {
-//			log.Printf("%v:: ALARM Action by %v and state = %v \n", time.Now().Nanosecond(), sm.ID, sm.getState())
-//		}
+		//		if Debug {
+		//			log.Printf("%v:: ALARM Action by %v and state = %v \n", time.Now().Nanosecond(), sm.ID, sm.getState())
+		//		}
 		if !sm.TimerSet {
 			sm.TimerSet = true
 			if sm.State == LEADER {
@@ -331,16 +332,16 @@ func handleActions(sm *RaftServer, act Action) {
 		sendAction := act.(Send)
 		//		if Debug {
 		//				log.Printf("SEND Action by %v sendto = %v event = %v  \n", sm.ID, sendAction.PeerId, sendAction.Event.getEventName())}
-//		if Debug {
-//			log.Printf("%v:: SEND %v -> %v (%v)", time.Now().Nanosecond(), sm.ID, sendAction.PeerId, sendAction.Event.getEventName())
-//		}
+		//		if Debug {
+		//			log.Printf("%v:: SEND %v -> %v (%v)", time.Now().Nanosecond(), sm.ID, sendAction.PeerId, sendAction.Event.getEventName())
+		//		}
 		sm.Server.Outbox() <- &cluster.Envelope{Pid: sendAction.PeerId, Msg: sendAction.Event}
 
 	case LogStore:
 		logStoreAction := act.(LogStore)
-//		if Debug {
-//			log.Printf("%v:: LOGSTORE Action by %v and index = %v and term = %v  sm.LogDir = %v \n", time.Now().Nanosecond(), sm.ID, logStoreAction.Index, logStoreAction.Term, sm.LogDir)
-//		}
+		//		if Debug {
+		//			log.Printf("%v:: LOGSTORE Action by %v and index = %v and term = %v  sm.LogDir = %v \n", time.Now().Nanosecond(), sm.ID, logStoreAction.Index, logStoreAction.Term, sm.LogDir)
+		//		}
 		lg, err := diskLog.Open(sm.LogDir)
 		lg.RegisterSampleEntry(LogStore{})
 		if err != nil {
@@ -383,9 +384,9 @@ func handleActions(sm *RaftServer, act Action) {
 
 	case Commit:
 		commitAction := act.(Commit)
-//		if Debug {
-//			log.Printf("%v:: %%^^^&&&**################################## COMMIT Action by %v and index = %v \n", time.Now().Nanosecond(), sm.ID, commitAction.Index)
-//		}
+		//		if Debug {
+		//			log.Printf("%v:: %%^^^&&&**################################## COMMIT Action by %v and index = %v \n", time.Now().Nanosecond(), sm.ID, commitAction.Index)
+		//		}
 		// send the response back to filehandler
 		sm.ClientCommitChannel <- commitAction
 

@@ -18,6 +18,7 @@ type State int
 var HighTimeout uint = 9999999
 var NumChannels uint = 1000
 var mutex = &sync.Mutex{}
+
 //var Debug bool = false
 //var Debug2 bool = false
 
@@ -129,8 +130,8 @@ func NewMock(c1 *mock.MockCluster, serverId int, numServers int, logDir string, 
 		term = state.Term
 	}
 	//////////////////////////////////////////////////
-	term = 0
-	lastVotedFor = -1
+	//	term = 0
+	//	lastVotedFor = -1
 	//////////////////////////////////////////////////
 	sm := RaftServer{
 		State:            FOLLOWER,
@@ -143,7 +144,7 @@ func NewMock(c1 *mock.MockCluster, serverId int, numServers int, logDir string, 
 		VotedFor:         lastVotedFor,
 		LogDir:           logDir,
 		StateStoreDir:    stateLogDir,
-		Log:              []LogEntry{}, //logArray, //[]LogEntry{}
+		Log:              logArray, //logArray, //[]LogEntry{}
 		TimerSet:         false,
 		VotesArray:       createIntArray(numServers, -1),
 		LeaderID:         -1,
@@ -447,9 +448,9 @@ func (sm *RaftServer) getState() string {
 func (sm *RaftServer) NodeStart() {
 	done := false
 	for {
-//		if Debug {
-//			log.Printf("Server ID: %v State : %v Term: %v \n", sm.Id(), sm.getState(), sm.Term)
-//		}
+		//		if Debug {
+		//			log.Printf("Server ID: %v State : %v Term: %v \n", sm.Id(), sm.getState(), sm.Term)
+		//		}
 		switch sm.State {
 		case FOLLOWER:
 			sm.State = sm.follower()

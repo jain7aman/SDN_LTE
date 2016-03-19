@@ -2,10 +2,10 @@
     "InboxSize": 1000,
     "OutboxSize": 1000,
     "Peers":[
-	{"Id":1,"Address":"localhost:3001"},
-	{"Id":2,"Address":"localhost:3002"},
-	{"Id":3,"Address":"localhost:3003"},
-	{"Id":4,"Address":"localhost:3004"},	
-	{"Id":5,"Address":"localhost:3005"}
+	{"Id":1,"Address":"localhost:7801"},
+	{"Id":2,"Address":"localhost:7802"},
+	{"Id":3,"Address":"localhost:7803"},
+	{"Id":4,"Address":"localhost:7804"},	
+	{"Id":5,"Address":"localhost:7805"}
    ]
 }
