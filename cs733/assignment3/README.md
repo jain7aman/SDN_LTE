@@ -1,4 +1,4 @@
-## Assignment 2- RAFT Node
+## Assignment 3- RAFT Node
 
 Third assignment for course CS733, Spring-2015  
 Submitted by: Aman Jain, Roll: 143050020
