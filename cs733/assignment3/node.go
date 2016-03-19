@@ -3,16 +3,23 @@ package main
 import (
 	"fmt"
 	"github.com/cs733-iitb/cluster"
+	"github.com/cs733-iitb/cluster/mock"
 	diskLog "github.com/cs733-iitb/log"
 	"log"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 type State int
 
+var HighTimeout uint = 9999999
 var NumChannels uint = 1000
+var mutex = &sync.Mutex{}
+//var Debug bool = false
+//var Debug2 bool = false
 
 //var RandomWaitTime uint = 4
 
@@ -20,6 +27,7 @@ const (
 	LEADER State = 1 + iota
 	FOLLOWER
 	CANDIDATE
+	POWEROFF
 )
 
 type Config struct {
@@ -28,6 +36,8 @@ type Config struct {
 	LogDir           string      // Log file directory for this node
 	ElectionTimeout  int
 	HeartbeatTimeout int
+	InboxSize        int
+	OutboxSize       int
 }
 
 type Node interface {
@@ -47,8 +57,112 @@ type Node interface {
 	Shutdown()
 }
 
-func GetConfig() []NetConfig {
-	cfg, err := cluster.ToConfig("src/ss/Cluster_config.json")
+func createMockCluster(configFile string) (*cluster.Config, *mock.MockCluster) {
+	cfg, err := cluster.ToConfig(configFile)
+	if err != nil {
+		panic(err)
+	}
+	c1, err := mock.NewCluster(configFile)
+	if err != nil {
+		panic(err)
+	}
+	return cfg, c1
+}
+
+func NewMock(c1 *mock.MockCluster, serverId int, numServers int, logDir string, stateLogDir string, electionTimeout int, heartbeatTimeout int, startServer bool) Node {
+	//	 inits the cluster
+
+	server := c1.Servers[serverId]
+
+	// inits the log
+	lg, err := diskLog.Open(logDir)
+	if err != nil {
+		panic(err)
+	}
+	defer lg.Close()
+	lg.RegisterSampleEntry(LogStore{})
+
+	//read entries from the log
+	numPrevLogs := lg.GetLastIndex() // should return a int64 value
+
+	var logArray []LogEntry
+	var i int64
+	if numPrevLogs != -1 {
+		for i = 0; i <= numPrevLogs; i++ {
+			data, err := lg.Get(i) // should return the Foo instance appended above
+			if err != nil {
+				panic(err)
+			}
+			logg, ok := data.(LogStore)
+			if !ok {
+				log.Fatal("Failed")
+			}
+			logArray = append(logArray, LogEntry{Index: logg.Index, Term: logg.Term, Command: logg.Data}) // creates the node's log
+		}
+	}
+
+	// reads the node-specific file that stores lastVotedFor and term
+	stateLog, err := diskLog.Open(stateLogDir)
+	if err != nil {
+		panic(err)
+	}
+	defer stateLog.Close()
+	stateLog.RegisterSampleEntry(StateStore{}) //registers the data structure to store
+
+	//read entries from the log
+	stateIndex := stateLog.GetLastIndex() // should return a int64 value
+
+	var lastVotedFor int = -1
+	var term uint = 0
+
+	// if previous state has been stored for this node, it will be at last index
+	if stateIndex != -1 {
+		data, err := stateLog.Get(i) // should return the Foo instance appended above
+		if err != nil {
+			panic(err)
+		}
+		state, ok := data.(StateStore)
+		if !ok {
+			log.Fatal("Failed")
+		}
+		lastVotedFor = state.VotedFor
+		term = state.Term
+	}
+	//////////////////////////////////////////////////
+	term = 0
+	lastVotedFor = -1
+	//////////////////////////////////////////////////
+	sm := RaftServer{
+		State:            FOLLOWER,
+		ID:               serverId,
+		ElectionTimeout:  electionTimeout,
+		HeartbeatTimeout: heartbeatTimeout,
+		Server:           server,
+		N:                uint(numServers),
+		Term:             term,
+		VotedFor:         lastVotedFor,
+		LogDir:           logDir,
+		StateStoreDir:    stateLogDir,
+		Log:              []LogEntry{}, //logArray, //[]LogEntry{}
+		TimerSet:         false,
+		VotesArray:       createIntArray(numServers, -1),
+		LeaderID:         -1,
+		CommitIndex:      -1, //If the node doesn’t store the committed index to a file, it has to be
+		//-inferred at startup. That will have to wait until the first few AppendEntry heartbeats have been responded to.
+		ReceiveChannel:      make(chan Event, NumChannels),
+		SendChannel:         make(chan Action, NumChannels),
+		ClientCommitChannel: make(chan CommitInfo, NumChannels),
+		QuitChannel:         make(chan bool, 1)}
+
+	if startServer {
+		go sm.NodeStart()
+	}
+
+	return &sm
+}
+
+func GetConfig(configFile string) Config {
+	cfg, err := cluster.ToConfig(configFile)
 	if err != nil {
 		panic(err)
 	}
@@ -63,19 +177,18 @@ func GetConfig() []NetConfig {
 		peers[i] = NetConfig{Id: cfg.Peers[i].Id, Host: tmpArray[0], Port: port}
 	}
 
-	return peers
+	return Config{cluster: peers, InboxSize: cfg.InboxSize, OutboxSize: cfg.OutboxSize}
 }
 
-func New(config Config) Node {
-	// inits the cluster
+func New(config Config, startServer bool) Node {
+	//	 inits the cluster
+	peersArray := make([]cluster.PeerConfig, len(config.cluster))
+	for i := 0; i < len(config.cluster); i++ {
+		peersArray[i] = cluster.PeerConfig{Id: config.cluster[i].Id, Address: config.cluster[i].Host + ":" + strconv.Itoa(config.cluster[i].Port)}
+	}
 
-	//	peersArray := make([]cluster.PeerConfig, len(config.cluster))
-	//	for i := 0; i < len(config.cluster); i++ {
-	//		peersArray[i] = cluster.PeerConfig{Id: config.cluster[i].Id, Address: config.cluster[i].Host + ":" + strconv.Itoa(config.cluster[i].Port)}
-	//	}
-
-	//	server, err := cluster.New(config.Id, cluster.Config{Peers: peersArray, InboxSize: 1000, OutboxSize: 1000})
-	server, err := cluster.New(config.Id, "src/ss/Cluster_config.json")
+	server, err := cluster.New(config.Id, cluster.Config{Peers: peersArray, InboxSize: config.InboxSize, OutboxSize: config.OutboxSize})
+	//	server, err := cluster.New(config.Id, "src/ss/Cluster_config.json")
 	if err != nil {
 		panic(err)
 	}
@@ -86,7 +199,7 @@ func New(config Config) Node {
 		panic(err)
 	}
 	defer lg.Close()
-	lg.RegisterSampleEntry(LogEntry{})
+	lg.RegisterSampleEntry(LogStore{})
 
 	//read entries from the log
 	numPrevLogs := lg.GetLastIndex() // should return a int64 value
@@ -96,39 +209,47 @@ func New(config Config) Node {
 	if numPrevLogs != -1 {
 		for i = 0; i <= numPrevLogs; i++ {
 			data, err := lg.Get(i) // should return the Foo instance appended above
-			assert(err == nil)
-			log, ok := data.(LogEntry)
-			assert(ok)
-			logArray = append(logArray, log) // creates the node's log
+			if err != nil {
+				panic(err)
+			}
+			logg, ok := data.(LogStore)
+			if !ok {
+				log.Fatal("Failed")
+			}
+			logArray = append(logArray, LogEntry{Index: logg.Index, Term: logg.Term, Command: logg.Data}) // creates the node's log
 		}
 	}
 
 	// reads the node-specific file that stores lastVotedFor and term
-	lg, err = diskLog.Open(strconv.Itoa(config.Id) + "_state")
+	stateLog, err := diskLog.Open(strconv.Itoa(config.Id) + "_state")
 	if err != nil {
 		panic(err)
 	}
-	defer lg.Close()
-	lg.RegisterSampleEntry(StateStore{}) //registers the data structure to store
+	defer stateLog.Close()
+	stateLog.RegisterSampleEntry(StateStore{}) //registers the data structure to store
 
 	//read entries from the log
-	stateIndex := lg.GetLastIndex() // should return a int64 value
+	stateIndex := stateLog.GetLastIndex() // should return a int64 value
 
 	var lastVotedFor int = -1
 	var term uint = 0
 
 	// if previous state has been stored for this node, it will be at last index
 	if stateIndex != -1 {
-		data, err := lg.Get(i) // should return the Foo instance appended above
-		assert(err == nil)
+		data, err := stateLog.Get(i) // should return the Foo instance appended above
+		if err != nil {
+			panic(err)
+		}
 		state, ok := data.(StateStore)
-		assert(ok)
+		if !ok {
+			log.Fatal("Failed")
+		}
 		lastVotedFor = state.VotedFor
 		term = state.Term
 	}
 	//////////////////////////////////////////////////
-	term = 0
-	lastVotedFor = -1
+	//	term = 0
+	//	lastVotedFor = -1
 	//////////////////////////////////////////////////
 	sm := RaftServer{
 		State:            FOLLOWER,
@@ -141,17 +262,20 @@ func New(config Config) Node {
 		VotedFor:         lastVotedFor,
 		LogDir:           config.LogDir,
 		StateStoreDir:    strconv.Itoa(config.Id) + "_state",
-		Log:              logArray,
+		Log:              logArray, //[]LogEntry{}
 		TimerSet:         false,
-		VotesArray:			createIntArray(len(config.cluster), -1),
+		VotesArray:       createIntArray(len(config.cluster), -1),
 		LeaderID:         -1,
 		CommitIndex:      -1, //If the node doesn’t store the committed index to a file, it has to be
 		//-inferred at startup. That will have to wait until the first few AppendEntry heartbeats have been responded to.
 		ReceiveChannel:      make(chan Event, NumChannels),
 		SendChannel:         make(chan Action, NumChannels),
-		ClientCommitChannel: make(chan CommitInfo, NumChannels)}
+		ClientCommitChannel: make(chan CommitInfo, NumChannels),
+		QuitChannel:         make(chan bool, 1)}
 
-	go sm.NodeStart()
+	if startServer {
+		go sm.NodeStart()
+	}
 
 	return &sm
 }
@@ -188,12 +312,13 @@ type RaftServer struct {
 	HeartbeatTimeout    int // HeartbeatTimeout for the state machine
 	Server              cluster.Server
 	LogDir              string // Log file directory for this node
-	StateStoreDir            string // state store file directory for this node
+	StateStoreDir       string // state store file directory for this node
 	Timer               *time.Timer
 	TimerSet            bool        // a check to see if the timer is already set or not
 	SendChannel         chan Action // An channel for sending events to state machines ( raft servers )
 	ReceiveChannel      chan Event  // An channel for receiving events from state machines ( raft servers )
 	ClientCommitChannel chan CommitInfo
+	QuitChannel         chan bool
 }
 
 func (sm *RaftServer) Append(command []byte) {
@@ -205,7 +330,16 @@ func (sm *RaftServer) CommitChannel() <-chan CommitInfo {
 }
 
 func (sm *RaftServer) CommittedIndex() int {
-	return sm.CommitIndex
+	mutex.Lock()
+	index := sm.CommitIndex
+	mutex.Unlock()
+	return index
+}
+
+func (sm *RaftServer) setCommittedIndex(commitIndex int) {
+	mutex.Lock()
+	sm.CommitIndex = commitIndex
+	mutex.Unlock()
 }
 
 func (sm *RaftServer) Get(index int) (error, []byte) {
@@ -225,8 +359,76 @@ func (sm *RaftServer) LeaderId() int {
 	return sm.LeaderID
 }
 
+func (sm *RaftServer) ClearLogs() {
+	if _, err := os.Stat(sm.LogDir); err == nil {
+		err = os.RemoveAll(sm.LogDir)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if _, err := os.Stat(sm.StateStoreDir); err == nil {
+		err = os.RemoveAll(sm.StateStoreDir)
+		if err != nil {
+			panic(err)
+		}
+	}
+	/*
+		// truncate log store dir
+		lg, err := diskLog.Open(sm.LogDir)
+		if err != nil {
+			panic(err)
+		}
+		defer lg.Close()
+		err = lg.TruncateToEnd(0)
+		if err != nil {
+			panic(err)
+		}
+
+		// truncate state store dir
+		stateLog, err := diskLog.Open(sm.StateStoreDir)
+		if err != nil {
+			panic(err)
+		}
+		defer stateLog.Close()
+		err = stateLog.TruncateToEnd(0)
+		if err != nil {
+			panic(err)
+		}
+	*/
+}
+
 func (sm *RaftServer) Shutdown() {
+	//shut down all the go routines and cancel timers
+	sm.ReceiveChannel <- ShutDownEvent{Id: sm.ID}
+	time.Sleep(1 * time.Second)
+
+	//get the last log index and flush the log upto the commit index
+	//	lg, err := diskLog.Open(sm.LogDir)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	defer lg.Close()
+	//	lg.RegisterSampleEntry(LogStore{})
+	//
+	//	//read entries from the log
+	//	numPrevLogs := lg.GetLastIndex() // should return a int64 value
+	//	data, err := lg.Get(numPrevLogs) // should return the Foo instance appended above
+	//	if err != nil {
+	//		log.Printf("Node ID = %v\n",sm.Id())
+	//		panic(err)
+	//	}
+	//	log, ok := data.(LogStore)
+	//	assert(ok)
+	//
+	//	if sm.CommittedIndex() > int(log.Index) {
+	//		for i := int(log.Index) + 1; i <= sm.CommittedIndex(); i++ {
+	//			lg.Append(LogEntry{Index: sm.Log[i].Index, Term: sm.Log[i].Term, Command: sm.Log[i].Command})
+	//		}
+	//	}
+
+	//close the socket
 	sm.Server.Close()
+	return
 }
 
 func (sm *RaftServer) getState() string {
@@ -236,12 +438,18 @@ func (sm *RaftServer) getState() string {
 	if sm.State == CANDIDATE {
 		return "CANDIDATE"
 	}
-	return "FOLLOWER"
+	if sm.State == FOLLOWER {
+		return "FOLLOWER"
+	}
+	return "POWEROFF"
 }
 
 func (sm *RaftServer) NodeStart() {
+	done := false
 	for {
-		log.Printf("Server ID: %v State : %v Term: %v \n", sm.Id(), sm.getState(), sm.Term)
+//		if Debug {
+//			log.Printf("Server ID: %v State : %v Term: %v \n", sm.Id(), sm.getState(), sm.Term)
+//		}
 		switch sm.State {
 		case FOLLOWER:
 			sm.State = sm.follower()
@@ -251,6 +459,13 @@ func (sm *RaftServer) NodeStart() {
 			break
 		case LEADER:
 			sm.State = sm.leader()
+			break
+		case POWEROFF:
+			done = true
+			break
+		}
+
+		if done {
 			break
 		}
 	}
@@ -331,6 +546,14 @@ func (AppendEvent) getEventName() string {
 	return "AppendEvent"
 }
 
+type ShutDownEvent struct {
+	Id int // Id of the server
+}
+
+func (ShutDownEvent) getEventName() string {
+	return "ShutDownEvent"
+}
+
 func (sm *RaftServer) ProcessEvent(ev Event) (actions []Action) {
 	sm.ReceiveChannel <- ev
 
@@ -346,17 +569,17 @@ func (sm *RaftServer) ProcessEvent(ev Event) (actions []Action) {
 		break
 	}
 
-	done := false
-	for act := range sm.SendChannel {
-		switch act.(type) {
-		case NoAction:
-			done = true
-		}
-		if done == true {
-			break
-		}
-		actions = append(actions, act)
-	}
+	//	done := false
+	//	for act := range sm.SendChannel {
+	//		switch act.(type) {
+	//		case NoAction:
+	//			done = true
+	//		}
+	//		if done == true {
+	//			break
+	//		}
+	//		actions = append(actions, act)
+	//	}
 
 	return actions
 }
@@ -407,7 +630,6 @@ func (Commit) getActionName() string {
 	return "Commit"
 }
 
-
 type Alarm struct {
 	Time uint
 }
@@ -433,12 +655,6 @@ type StateStore struct {
 
 func (StateStore) getActionName() string {
 	return "StateStore"
-}
-
-type NoAction struct{}
-
-func (NoAction) getActionName() string {
-	return "NoAction"
 }
 
 func minimum(x int, y int) int {
