@@ -43,7 +43,6 @@ func main() {
 //	initializeSystem("config1.json")
 //
 //	<-done
-	deleteLogs2(5)
 	RegisterEvents2()
 	var id int
 	id, err := strconv.Atoi(os.Args[1])
@@ -73,23 +72,6 @@ func main() {
 	
 }
 
-
-func deleteLogs2(numServers int) {
-	for i := 1; i <= numServers; i++ {
-		if _, err := os.Stat("server_" + strconv.Itoa(i) + "_log"); err == nil {
-			err = os.RemoveAll("server_" + strconv.Itoa(i) + "_log")
-			if err != nil {
-				panic(err)
-			}
-		}
-		if _, err := os.Stat(strconv.Itoa(i) + "_state"); err == nil {
-			err = os.RemoveAll(strconv.Itoa(i) + "_state")
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-}
 
 func RegisterEvents2() {
 	gob.Register(AppendEntriesReqEvent{})
