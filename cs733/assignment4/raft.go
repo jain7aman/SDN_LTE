@@ -24,13 +24,13 @@ func RaftInitialize(serverId int, cfg *cluster.Config) Node {
 	config.cluster = tmpConfig.cluster
 	config.Id = serverId
 	config.LogDir = "server_" + strconv.Itoa(serverId) + "_log"
-	if serverId == 1 {
-		config.ElectionTimeout = r1.Intn(100) + 100
-	config.HeartbeatTimeout = r1.Intn(100) + 10
-	}else{
+	//	if serverId == 1 {
+	//		config.ElectionTimeout = r1.Intn(100) + 100
+	//	config.HeartbeatTimeout = r1.Intn(100) + 10
+	//	}else{
 	config.ElectionTimeout = r1.Intn(1200) + 500
 	config.HeartbeatTimeout = r1.Intn(100) + 10
-	}
+	//	}
 	raftServer = New(config, true)
 
 	return raftServer
