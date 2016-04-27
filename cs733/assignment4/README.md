@@ -1,6 +1,6 @@
 ## Assignment 4- RAFT Integrated File System Node
 
-Third assignment for course CS733, Spring-2015  
+Fourth assignment for course CS733, Spring-2015  
 Submitted by: Aman Jain, Roll: 143050020
 
 ### Introduction
@@ -12,7 +12,7 @@ Submitted by: Aman Jain, Roll: 143050020
 ### Installation Instructions
 <code>go get </code> github.com/jain7aman/cs733/assignment4
 
-Five files are supposed to be there <br/>
+Seven files are supposed to be there <br/>
 1. node.go contains the code for all the structure variables state machine is using. <br/>
 2. follower.go, candidate.go and leader.go contains the code for respective states of the state machine. <br/>
 3. raft.go contains all the initialization and handler method of wrapper node for the state machine. <br/>
