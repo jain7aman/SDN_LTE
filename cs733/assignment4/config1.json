@@ -2,10 +2,10 @@
     "InboxSize": 1000,
     "OutboxSize": 1000,
     "Peers":[
-	{"Id":1,"Address":"localhost:8001", "ClientPort":":8051"},
-	{"Id":2,"Address":"localhost:8002", "ClientPort":":8052"},
-	{"Id":3,"Address":"localhost:8003", "ClientPort":":8053"},
-	{"Id":4,"Address":"localhost:8004", "ClientPort":":8054"},
-	{"Id":5,"Address":"localhost:8005", "ClientPort":":8055"}
+	{"Id":1,"Address":"localhost:11001", "ClientPort":":11051"},
+	{"Id":2,"Address":"localhost:11002", "ClientPort":":11052"},
+	{"Id":3,"Address":"localhost:11003", "ClientPort":":11053"},
+	{"Id":4,"Address":"localhost:11004", "ClientPort":":11054"},
+	{"Id":5,"Address":"localhost:11005", "ClientPort":":11055"}
    ]
 }

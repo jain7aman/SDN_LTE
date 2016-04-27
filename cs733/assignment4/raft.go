@@ -5,7 +5,7 @@ import (
 	"github.com/cs733-iitb/cluster"
 	"github.com/cs733-iitb/cluster/mock"
 	diskLog "github.com/cs733-iitb/log"
-//	"log"
+	//	"log"
 	"math/rand"
 	"strconv"
 	"time"
@@ -14,7 +14,7 @@ import (
 func RaftInitialize(serverId int, cfg *cluster.Config) Node {
 	var s1 rand.Source = rand.NewSource(time.Now().UnixNano())
 	var r1 *rand.Rand = rand.New(s1)
-	
+
 	// read the configuration file
 	tmpConfig := GetConfig(cfg)
 
@@ -24,10 +24,13 @@ func RaftInitialize(serverId int, cfg *cluster.Config) Node {
 	config.cluster = tmpConfig.cluster
 	config.Id = serverId
 	config.LogDir = "server_" + strconv.Itoa(serverId) + "_log"
-
-	config.ElectionTimeout = r1.Intn(1000) + 400
+	if serverId == 1 {
+		config.ElectionTimeout = r1.Intn(100) + 100
 	config.HeartbeatTimeout = r1.Intn(100) + 10
-
+	}else{
+	config.ElectionTimeout = r1.Intn(1200) + 500
+	config.HeartbeatTimeout = r1.Intn(100) + 10
+	}
 	raftServer = New(config, true)
 
 	return raftServer
@@ -36,7 +39,7 @@ func RaftInitialize(serverId int, cfg *cluster.Config) Node {
 func InitializeMocks(configFile string) (*mock.MockCluster, []Node) {
 	var s1 rand.Source = rand.NewSource(time.Now().UnixNano())
 	var r1 *rand.Rand = rand.New(s1)
-	
+
 	// read the configuration file
 	tmpConfig, c1 := createMockCluster(configFile)
 	var electionTimeout, heartbeatTimeout int
@@ -312,7 +315,7 @@ func handleActions(sm *RaftServer, act Action) {
 					//					sm.Timer.Reset(time.Duration(alarmAction.Time+uint(r1.Intn(0))) * time.Millisecond)
 					sm.Timer.Reset(time.Duration(alarmAction.Time) * time.Millisecond)
 				} else {
-					sm.Timer.Reset(time.Duration(alarmAction.Time + uint(r1.Intn(1000))) * time.Millisecond)
+					sm.Timer.Reset(time.Duration(alarmAction.Time+uint(r1.Intn(1000))) * time.Millisecond)
 				}
 
 			}
@@ -375,7 +378,7 @@ func handleActions(sm *RaftServer, act Action) {
 	case Commit:
 		commitAction := act.(Commit)
 		if Debug {
-//			log.Printf("%v:: %%^^^&&&**################################## COMMIT Action by %v and index = %v \n", time.Now().Nanosecond(), sm.ID, commitAction.Index)
+			//			log.Printf("%v:: %%^^^&&&**################################## COMMIT Action by %v and index = %v \n", time.Now().Nanosecond(), sm.ID, commitAction.Index)
 		}
 		// send the response back to filehandler
 		sm.ClientCommitChannel <- commitAction

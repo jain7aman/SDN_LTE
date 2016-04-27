@@ -326,14 +326,14 @@ func parseCommand(commands chan ChannelCommand, clientId int, con net.Conn, conn
 					CmdType:  "shutdown",
 					Filename: "",
 				}
-				shutDownChannel <- "shutdown" // for the backend chhanel to shutdown
+//				log.Printf("Shutdown command received\n")
+				shutDownChannel <- "shutdown" // for the backend channel to shutdown
 				time.Sleep(100 * time.Millisecond)
 				msg := "shutdown"
 				select {
 				case serverShutDown <- msg: // for the main server to shutdown
 				default:
 				}
-
 				// create a dummmy client to connect to this server, to unbloack the Accept call
 				conn, err := net.Dial("tcp", serverAddress)
 				if err != nil {
@@ -352,10 +352,10 @@ func parseCommand(commands chan ChannelCommand, clientId int, con net.Conn, conn
 
 func handleMap(cmd ChannelCommand, sendReply bool, serverId int, data map[string]file, channelMap map[int]chan string) {
 	//mutexLock.Lock()
-	log.Printf("Client ID = %v command type=%v filename = %v\n", cmd.ClientId, cmd.CmdType, cmd.Filename)
+//	log.Printf("Client ID = %v command type=%v filename = %v\n", cmd.ClientId, cmd.CmdType, cmd.Filename)
 	switch cmd.CmdType {
 	case "write": //handles the write command
-		log.Printf("Sever ID %v Client ID = %v----------INSIDE WRITE------------\n", serverId, cmd.ClientId)
+//		log.Printf("Sever ID %v Client ID = %v----------INSIDE WRITE------------\n", serverId, cmd.ClientId)
 		var version int64 = 1
 		if fl, found := data[cmd.Filename]; found {
 			if cmd.FileStruct.ExpirySpecified { //if the expiry time was specified or if its value was not zero
@@ -387,12 +387,12 @@ func handleMap(cmd ChannelCommand, sendReply bool, serverId int, data map[string
 			data[cmd.Filename] = cmd.FileStruct
 		}
 		if sendReply {
-			log.Printf("yoooooooooo\n")
+//			log.Printf("yoooooooooo\n")
 			channelMap[cmd.ClientId] <- "OK " + strconv.FormatInt(version, 10) + "\r\n"
 		}
 
 	case "read": //handles the read command
-		log.Printf("Server ID = %v Client ID = %v----------INSIDE READ------------\n", serverId, cmd.ClientId)
+//		log.Printf("Server ID = %v Client ID = %v----------INSIDE READ------------\n", serverId, cmd.ClientId)
 		if fl, found := data[cmd.Filename]; found {
 			if fl.ExpirySpecified {
 				duration := time.Since(fl.FileCreationTime)
@@ -419,7 +419,7 @@ func handleMap(cmd ChannelCommand, sendReply bool, serverId int, data map[string
 		}
 
 	case "cas": //handles the compare and swap command
-		log.Printf("Server ID = %v Client ID = %v----------INSIDE CAS------------\n", serverId, cmd.ClientId)
+//		log.Printf("Server ID = %v Client ID = %v----------INSIDE CAS------------\n", serverId, cmd.ClientId)
 		var fileVersion int64 = 1
 		if fl, found := data[cmd.Filename]; found {
 			if cmd.FileStruct.ExpirySpecified { //file has already expired
@@ -457,7 +457,7 @@ func handleMap(cmd ChannelCommand, sendReply bool, serverId int, data map[string
 		channelMap[cmd.ClientId] <- "OK " + strconv.FormatInt(fileVersion, 10) + "\r\n"
 
 	case "delete": //handles the delete command
-		log.Printf("Server ID = %v Client ID = %v ----------INSIDE DELETE------------\n", serverId, cmd.ClientId)
+//		log.Printf("Server ID = %v Client ID = %v ----------INSIDE DELETE------------\n", serverId, cmd.ClientId)
 		if fl, found := data[cmd.Filename]; found {
 			if fl.ExpirySpecified {
 				duration := time.Since(fl.FileCreationTime)
@@ -487,8 +487,9 @@ func handleMap(cmd ChannelCommand, sendReply bool, serverId int, data map[string
 
 func backendHandler(sm *RaftServer, data map[string]file, addressMap map[int]string,
 	connectionMap map[int]net.Conn, channelMap map[int]chan string, shutDownChannel chan string) {
-
-	log.Printf("---------backendHandler------------\n")
+	var lastMessageId int
+	firstTime := true
+//	log.Printf("---------backendHandler------------\n")
 	done := false
 	cmd := ChannelCommand{}
 	for {
@@ -501,16 +502,16 @@ func backendHandler(sm *RaftServer, data map[string]file, addressMap map[int]str
 			if err != nil {
 				panic(err)
 			}
-			log.Printf("Client ID = %v Server ID = %v*********CMD=%v filename=%v\n", cmd.ClientId, sm.Id(), cmd.CmdType, cmd.Filename)
+//			log.Printf("Client ID = %v Server ID = %v*********CMD=%v filename=%v\n", cmd.ClientId, sm.Id(), cmd.CmdType, cmd.Filename)
 
 			if commitEvent.Err != nil {
 				leaderId := commitEvent.Err.(*AppendError).getLeaderId()
 				if leaderId > 0 {
-					log.Printf("ERR REDIRECTION TO client Id = %v SERVER = %v and address = %v \n", cmd.ClientId, leaderId, addressMap[leaderId])
+//					log.Printf("ERR REDIRECTION TO client Id = %v SERVER = %v and address = %v \n", cmd.ClientId, leaderId, addressMap[leaderId])
 					channelMap[cmd.ClientId] <- "ERR_REDIRECT " + addressMap[leaderId] + "\r\n"
 				} else {
-					log.Printf("ERR REDIRECTION No known leader \n")
-					channelMap[cmd.ClientId] <- "ERR_REDIRECT No known Leader \r\n"
+//					log.Printf("ERR REDIRECTION No_Known_Leader \n")
+					channelMap[cmd.ClientId] <- "ERR_REDIRECT No_Known_Leader \r\n"
 				}
 				if con, found := connectionMap[cmd.ClientId]; found {
 					time.Sleep(100 * time.Millisecond)
@@ -518,10 +519,32 @@ func backendHandler(sm *RaftServer, data map[string]file, addressMap map[int]str
 					delete(connectionMap, cmd.ClientId)
 				}
 			} else {
-				if sm.State == LEADER {
-					handleMap(cmd, true, sm.Id(), data, channelMap)
+				ignore := false
+				// taking care of duplicate and out of order delivery
+				if firstTime {
+					firstTime = false
+					lastMessageId = cmd.MessageId
 				} else {
-					handleMap(cmd, false, sm.Id(), data, channelMap)
+					if cmd.MessageId != lastMessageId+1 {
+						//duplicate message
+						if cmd.MessageId <= lastMessageId {
+//							log.Printf("Server ID: %v got duplicate message with id = %v expected to %v \n", sm.Id(), cmd.MessageId, lastMessageId+1)
+//							ignore = true
+						}else { // out of order delivery, initial packet got dropped
+//							log.Printf("Server ID: %v got out of order message with id = %v expected to %v \n", sm.Id(), cmd.MessageId, lastMessageId+1)
+//							ignore = true
+							// dont know what else to do ??? 
+						}
+					} else {
+						lastMessageId = cmd.MessageId
+					}
+				}
+				if !ignore {
+					if sm.State == LEADER {
+						handleMap(cmd, true, sm.Id(), data, channelMap)
+					} else {
+						handleMap(cmd, false, sm.Id(), data, channelMap)
+					}
 				}
 			}
 
@@ -539,10 +562,13 @@ func backendHandler(sm *RaftServer, data map[string]file, addressMap map[int]str
 
 func clientHandler(commands chan ChannelCommand, sm *RaftServer, data map[string]file, channelMap map[int]chan string) {
 	done := false
+	var messageCounter int = 0
 	for cmd := range commands {
 		switch cmd.CmdType {
 		case "write", "cas", "delete": //handles the write command
-			log.Printf("write, cas, delete Right^^^^^^^^^^^^^^^^^^^^^^^SERVER ID = %v STATE = %v cmd type = %v and filename=%v\n", sm.Id(), sm.getState(), cmd.CmdType, cmd.Filename)
+			messageCounter++
+			cmd.MessageId = messageCounter
+//			log.Printf("write, cas, delete Right^^^^^^^^^^^^^^^^^^^^^^^SERVER ID = %v STATE = %v cmd type = %v and filename=%v\n", sm.Id(), sm.getState(), cmd.CmdType, cmd.Filename)
 			buf, err := json.Marshal(cmd)
 			if err != nil {
 				panic(err)
@@ -550,7 +576,7 @@ func clientHandler(commands chan ChannelCommand, sm *RaftServer, data map[string
 			sm.Append(buf)
 
 		case "read":
-			log.Printf("READ Right^^^^^^^^^^^^^^^^^^^^^^^SERVER ID = %v STATE = %v cmd type = %v and filename=%v\n", sm.Id(), sm.getState(), cmd.CmdType, cmd.Filename)
+//			log.Printf("READ Right^^^^^^^^^^^^^^^^^^^^^^^SERVER ID = %v STATE = %v cmd type = %v and filename=%v\n", sm.Id(), sm.getState(), cmd.CmdType, cmd.Filename)
 			handleMap(cmd, true, sm.Id(), data, channelMap)
 
 		case "shutdown":
@@ -571,7 +597,7 @@ func restoreMap(serverId int, logArray []LogEntry, data map[string]file, channel
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("Server id= %v, Index = %v  and command = %v file name = %v data = %v\n", serverId, i, cmd.CmdType, cmd.Filename, string(cmd.FileStruct.FileContent))
+//		log.Printf("Server id= %v, Index = %v  and command = %v file name = %v data = %v\n", serverId, i, cmd.CmdType, cmd.Filename, string(cmd.FileStruct.FileContent))
 		handleMap(cmd, false, serverId, data, channelMap)
 	}
 }

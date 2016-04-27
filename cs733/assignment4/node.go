@@ -58,17 +58,6 @@ type Node interface {
 	Shutdown()
 }
 
-func createMockCluster(configFile string) (*cluster.Config, *mock.MockCluster) {
-	cfg, err := cluster.ToConfig(configFile)
-	if err != nil {
-		panic(err)
-	}
-	c1, err := mock.NewCluster(configFile)
-	if err != nil {
-		panic(err)
-	}
-	return cfg, c1
-}
 
 func NewMock(c1 *mock.MockCluster, serverId int, numServers int, logDir string, stateLogDir string, electionTimeout int, heartbeatTimeout int, startServer bool) Node {
 	//	 inits the cluster
@@ -161,6 +150,18 @@ func NewMock(c1 *mock.MockCluster, serverId int, numServers int, logDir string, 
 
 	return &sm
 }
+func createMockCluster(configFile string) (*cluster.Config, *mock.MockCluster) {
+	cfg, err := cluster.ToConfig(configFile)
+	if err != nil {
+		panic(err)
+	}
+	c1, err := mock.NewCluster(configFile)
+	if err != nil {
+		panic(err)
+	}
+	return cfg, c1
+}
+
 
 func GetConfig(clusterCfg *cluster.Config) RaftConfig {
 	cfg, err := cluster.ToConfig(*clusterCfg)
@@ -449,7 +450,7 @@ func (sm *RaftServer) NodeStart() {
 	done := false
 	for {
 		if Debug {
-			log.Printf("Server ID: %v State : %v Term: %v \n", sm.Id(), sm.getState(), sm.Term)
+//			log.Printf("Server ID: %v State : %v Term: %v \n", sm.Id(), sm.getState(), sm.Term)
 		}
 		switch sm.State {
 		case FOLLOWER:

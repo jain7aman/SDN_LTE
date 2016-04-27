@@ -1,0 +1,11 @@
+{
+    "InboxSize": 1000,
+    "OutboxSize": 1000,
+    "Peers":[
+	{"Id":1,"Address":"localhost:55001", "ClientPort":":55051"},
+	{"Id":2,"Address":"localhost:55002", "ClientPort":":55052"},
+	{"Id":3,"Address":"localhost:55003", "ClientPort":":55053"},
+	{"Id":4,"Address":"localhost:55004", "ClientPort":":55054"},
+	{"Id":5,"Address":"localhost:55005", "ClientPort":":55055"}
+   ]
+}

@@ -52,14 +52,14 @@ func (sm *RaftServer) leader() State {
 						// send the entries not present in follower's log to respective follower
 						newEntries := sm.Log[nextIndex[i-1]:]
 
-						if DebugLeader {
+						if DebugLeader && i == 1 {
 							log.Printf("%v:: #############################################Data = %v Size of new entries = %v to server = %v by server = %v nextIndex[i-1] =%v \n", time.Now().Nanosecond(), string(newEntries[0].Command), len(newEntries), i, sm.ID, nextIndex[i-1])
 						}
 						sm.SendChannel <- Send{i, AppendEntriesReqEvent{Entries: newEntries, LeaderCommit: sm.CommittedIndex(), LeaderId: sm.ID, PrevLogIndex: int(nextIndex[i-1]) - 1, PrevLogTerm: prevLogTerm, Term: sm.Term}}
 						nextIndex[i-1] = int(len(sm.Log))
 
 					} else {
-						if DebugLeader {
+						if DebugLeader && i == 1 {
 							log.Printf("%v::  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^HEART BEAT to server = %v by server = %v \n", time.Now().Nanosecond(), i, sm.ID)
 						}
 						// sends the empty heartbeat
@@ -119,7 +119,7 @@ func (sm *RaftServer) leader() State {
 			}
 
 		case AppendEvent:
-			if !DebugLeader {
+			if DebugLeader {
 				log.Printf("***** LEADER ***** Server ID = %v  Term = %v and event = %v \n", sm.Id(), sm.Term, event.(AppendEvent).getEventName())
 			}
 			msg := event.(AppendEvent)

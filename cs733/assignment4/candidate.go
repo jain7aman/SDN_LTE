@@ -54,6 +54,7 @@ func (sm *RaftServer) candidate() State {
 			if DebugCandidate {
 				log.Printf("** CANDIDATE ** Server ID = %v  Term = %v  and event = %v \n", sm.Id(), sm.Term, event.(TimeoutEvent).getEventName())
 			}
+//			sm.LeaderID = -1
 			sm.Term++ //increments the term number
 			sm.VotedFor = -1
 			sm.SendChannel <- StateStore{Term: sm.Term, VotedFor: sm.VotedFor}
@@ -97,9 +98,11 @@ func (sm *RaftServer) candidate() State {
 					return FOLLOWER
 				}
 
-				if sm.VotesArray[msg.Id-1] != 0 { // If already rejected by THIS vote ? If no, then update the reject count
-					sm.VotesArray[msg.Id-1] = 0
-					//votesNotReceived++
+				if msg.Id-1 >= 0 && msg.Id-1 < int(sm.N) {
+					if sm.VotesArray[msg.Id-1] != 0 { // If already rejected by THIS vote ? If no, then update the reject count
+						sm.VotesArray[msg.Id-1] = 0
+						//votesNotReceived++
+					}
 				}
 				for i := uint(0); i < sm.N; i++ {
 					if sm.VotesArray[i] == 0 {
