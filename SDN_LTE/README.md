@@ -25,11 +25,7 @@ $ sudo apt-get install mysql-server
   * To download Java 8, run the following commands:
     ``` 
     $ sudo add-apt-repository ppa:webupd8team/java
-    ```
-    ```
     $ sudo apt-get update
-    ```
-    ```
     $ sudo apt-get install oracle-java8-installer
     ```
     
