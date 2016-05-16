@@ -74,7 +74,9 @@ We need 6 machines in total to have the entire setup running.
     * Enter ```net.floodlightcontroller.sdnepc``` in the **Name** box and click on the **Finish** button. This creates a new package.
     * Copy the files Constants.java, ```MME.java, HSS.java, SGW.java, PGW.java``` and ```Utils.java``` and paste into the new package created.
 8. Register the modules (```MME, SGW``` and ```PGW```):
-    * First, we need to tell the loader that the modules exist. Append the following lines to the file ```src/main/resources/META-INF/services/net.floodlightcontroller.core.module.IFloodlightModule
+    * First, we need to tell the loader that the modules exist. Append the following lines to the file ``` 
+    ```
+    src/main/resources/META-INF/services/net.floodlightcontroller.core.module.IFloodlightModule
     ```
     ```
       * net.floodlightcontroller.sdnepc.MME
