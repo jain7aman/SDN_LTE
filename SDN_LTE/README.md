@@ -24,7 +24,6 @@ $ sudo apt-get install mysql-server
 2. Download the dependencies for Floodlight: Floodlight master has been updated (on 04/30/16) to Java 8.
   * To download Java 8, run the following commands:
     ```
-    
     $ sudo add-apt-repository ppa:webupd8team/java
     $ sudo apt-get update
     $ sudo apt-get install oracle-java8-installer
