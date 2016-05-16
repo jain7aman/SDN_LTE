@@ -17,7 +17,7 @@ We need 6 machines in total to have the entire setup running.
 * RAM: 4 GB
 
 ## Controller Machine (MySQL and Floodlight)
-1. Install MySQL database using the following command:
+1. Install MySQL database using the following command:<br/>
   ```
   $ sudo apt-get install mysql-server
   ```
@@ -36,10 +36,21 @@ We need 6 machines in total to have the entire setup running.
   * To download remaining dependencies for Floodlight master and above:<br/>
     ```
     $ sudo apt-get install build-essential ant maven python-dev eclipse
-    ```
+    ```<br/>
 3. To download dependencies for Floodlight v1.2 and below:<br/>
     ```
     $ sudo apt-get install build-essential openjdk-7-jdk ant maven python-dev eclipse
+    ```
+4. Download and build Floodlight: The below uses the master version of Floodlight. To use a specific version, specify the branch in the git step by appending -b <branch-name>.<br/>
+    ```
+    $ git clone https://github.com/floodlight/floodlight.git
+    $ cd floodlight
+    $ git submodule init
+    $ git submodule update
+    $ ant
+     
+    $ sudo mkdir /var/lib/floodlight
+    $ sudo chmod 777 /var/lib/floodlight
     ```
    
 
