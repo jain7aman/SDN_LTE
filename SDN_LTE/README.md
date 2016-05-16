@@ -18,9 +18,9 @@ We need 6 machines in total to have the entire setup running.
 
 ## Controller Machine (MySQL and Floodlight)
 1. Install MySQL database using the following command:
-```
-$ sudo apt-get install mysql-server
-```
+  ```
+  $ sudo apt-get install mysql-server
+  ```
 2. Download the dependencies for Floodlight: Floodlight master has been updated (on 04/30/16) to Java 8.
   * To download Java 8, run the following commands:
     ``` 
@@ -37,7 +37,7 @@ $ sudo apt-get install mysql-server
     ```
     $ sudo apt-get install build-essential ant maven python-dev eclipse
     ```
- 3. To download dependencies for Floodlight v1.2 and below:<br/>
+3. To download dependencies for Floodlight v1.2 and below:<br/>
     ```
     $ sudo apt-get install build-essential openjdk-7-jdk ant maven python-dev eclipse
     ```
