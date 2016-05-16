@@ -66,8 +66,14 @@ We need 6 machines in total to have the entire setup running.
     * Right Click **Java Application->New**
     * For **Name** use **FloodlightLaunch**
     * For **Project** use **Floodlight**
-    * For **Main** use **net.floodlightcontroller.core.Main**
+    * For **Main** use ```net.floodlightcontroller.core.Main```
     * Click **Apply**
+7. Creating modules for SDN EPC:
+    * Expand the **floodlight** item in the Package Explorer and find the ```src/main/java``` folder.
+    * Right-click on the ```src/main/java``` folder and choose **New/Package**.
+    * Enter ```net.floodlightcontroller.sdnepc``` in the **Name** box and click on the Finish button. This creates a new package.
+    * Copy the files Constants.java, MME.java, HSS.java, SGW.java, PGW.java and Utils.java and paste into the new package created.
+
 
    
 
