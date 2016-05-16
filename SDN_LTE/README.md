@@ -36,12 +36,12 @@ We need 6 machines in total to have the entire setup running.
   * To download remaining dependencies for Floodlight master and above:<br/>
     ```
     $ sudo apt-get install build-essential ant maven python-dev eclipse
-    ```<br/>
+    ```  
 3. To download dependencies for Floodlight v1.2 and below:<br/>
     ```
     $ sudo apt-get install build-essential openjdk-7-jdk ant maven python-dev eclipse
     ```
-4. Download and build Floodlight: The below uses the master version of Floodlight. To use a specific version, specify the branch in the git step by appending -b <branch-name>.<br/>
+4. Download and build Floodlight: The below uses the master version of Floodlight. To use a specific version, specify the branch in the git step by appending -b &lt;branch-name&gt;.<br/>
     ```
     $ git clone https://github.com/floodlight/floodlight.git
     $ cd floodlight
@@ -83,6 +83,13 @@ We need 6 machines in total to have the entire setup running.
       * net.floodlightcontroller.sdnepc.SGW
       * net.floodlightcontroller.sdnepc.PGW
     ```
+    * Then, we tell the modules to be loaded. Append the above fully qualified module names separated by comma to the key *floodlight.modules* in the file ```src/main/resources/floodlightdefault.properties```.
+9. Adding SQL adapter to the project:
+  * Right-click floodlight **project->Build Path->Configure Build Path**.
+  * Under the Libraries tab, click on **Add External JARs**.
+  * Select the file ```mysql-connector-java-5.1.35-bin.jar``` and click **OK**.
+
+
 
 
 
