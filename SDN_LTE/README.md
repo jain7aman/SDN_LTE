@@ -33,6 +33,10 @@ $ sudo apt-get install mysql-server
     ```
     $ sudo apt-get install oracle-java8-set-default
     ```
+  * To download remaining dependencies for Floodlight master and above:
+    ```  
+    $ sudo apt-get install build-essential ant maven python-dev eclipse
+    ```
    
 
 
