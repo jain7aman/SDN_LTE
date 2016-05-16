@@ -18,7 +18,9 @@ We need 6 machines in total to have the entire setup running.
 
 ## Controller Machine (MySQL and Floodlight)
 1. Install MySQL database using the following command:
-```$ sudo apt-get install mysql-server```
+```
+$ sudo apt-get install mysql-server
+```
 
 
 
