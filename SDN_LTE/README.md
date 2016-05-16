@@ -57,10 +57,10 @@ We need 6 machines in total to have the entire setup running.
     ant eclipse
     ```
     * Open eclipse and create a new workspace
-    * File -> Import -> General -> Existing Projects into Workspace. Then click "Next".
-    * From "Select root directory" click "Browse". Select the parent directory where you placed floodlight earlier.
-    * Check the box for "Floodlight". No other Projects should be present and none should be selected.
-    * Click Finish.
+    * **File -> Import -> General -> Existing Projects into Workspace**. Then click **Next**.
+    * From **Select root directory** click **Browse**. Select the parent directory where you placed floodlight earlier.
+    * Check the box for **Floodlight**. No other Projects should be present and none should be selected.
+    * Click **Finish**.
 6. Running Floodlight in Eclipse: Create the FloodlightLaunch target.
     * Click **Run->Run Configurations**
     * Right Click **Java Application->New**
