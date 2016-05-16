@@ -29,13 +29,17 @@ $ sudo apt-get install mysql-server
     $ sudo apt-get install oracle-java8-installer
     ```
     
-    To automatically set Java 8 environment variables, install the following package:
+    To automatically set Java 8 environment variables, install the following package:<br/>
     ```
     $ sudo apt-get install oracle-java8-set-default
     ```
-  * To download remaining dependencies for Floodlight master and above:
-    ```  
+  * To download remaining dependencies for Floodlight master and above:<br/>
+    ```
     $ sudo apt-get install build-essential ant maven python-dev eclipse
+    ```
+ 3. To download dependencies for Floodlight v1.2 and below:<br/>
+    ```
+    $ sudo apt-get install build-essential openjdk-7-jdk ant maven python-dev eclipse
     ```
    
 
