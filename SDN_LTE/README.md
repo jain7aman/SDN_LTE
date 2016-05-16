@@ -12,11 +12,11 @@ The manual contains all the steps to setup the SDN-based EPC. The entire setup (
 
 We need 6 machines in total to have the entire setup running.
 
-### Requirements
+#### Requirements ####
 * Ubuntu 14.04 (64-bit)
 * RAM: 4 GB
 
-### Controller Machine (MySQL and Floodlight)
+#### Controller Machine (MySQL and Floodlight) ####
 1. Install MySQL database using the following command:<br/>
   ```
   $ sudo apt-get install mysql-server
