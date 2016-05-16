@@ -52,6 +52,16 @@ We need 6 machines in total to have the entire setup running.
     $ sudo mkdir /var/lib/floodlight
     $ sudo chmod 777 /var/lib/floodlight
     ```
+5. Setting up Floodlight on Eclipse: The following command creates several files: Floodlight.launch, Floodlight_junit.launch, .classpath, and .project. From these you can setup a new Eclipse project.<br/>
+    ```
+    ant eclipse
+    ```
+    * Open eclipse and create a new workspace
+    * File -> Import -> General -> Existing Projects into Workspace. Then click "Next".
+    * From "Select root directory" click "Browse". Select the parent directory where you placed floodlight earlier.
+    * Check the box for "Floodlight". No other Projects should be present and none should be selected.
+    * Click Finish.
+
    
 
 
