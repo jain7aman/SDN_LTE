@@ -12,11 +12,11 @@ The manual contains all the steps to setup the SDN-based EPC. The entire setup (
 
 We need 6 machines in total to have the entire setup running.
 
-## Requirements
+### Requirements
 * Ubuntu 14.04 (64-bit)
 * RAM: 4 GB
 
-## Controller Machine (MySQL and Floodlight)
+### Controller Machine (MySQL and Floodlight)
 1. Install MySQL database using the following command:<br/>
   ```
   $ sudo apt-get install mysql-server
@@ -61,6 +61,13 @@ We need 6 machines in total to have the entire setup running.
     * From "Select root directory" click "Browse". Select the parent directory where you placed floodlight earlier.
     * Check the box for "Floodlight". No other Projects should be present and none should be selected.
     * Click Finish.
+6. Running Floodlight in Eclipse: Create the FloodlightLaunch target.
+    * Click **Run->Run Configurations**
+    * Right Click Java Application->New
+    * For Name use FloodlightLaunch
+    * For Project use Floodlight
+    * For Main use net.floodlightcontroller.core.Main
+    * Click Apply
 
    
 
