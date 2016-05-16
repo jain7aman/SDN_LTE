@@ -63,11 +63,11 @@ We need 6 machines in total to have the entire setup running.
     * Click Finish.
 6. Running Floodlight in Eclipse: Create the FloodlightLaunch target.
     * Click **Run->Run Configurations**
-    * Right Click Java Application->New
-    * For Name use FloodlightLaunch
-    * For Project use Floodlight
-    * For Main use net.floodlightcontroller.core.Main
-    * Click Apply
+    * Right Click **Java Application->New**
+    * For **Name** use **FloodlightLaunch**
+    * For **Project** use **Floodlight**
+    * For **Main** use **net.floodlightcontroller.core.Main**
+    * Click **Apply**
 
    
 
