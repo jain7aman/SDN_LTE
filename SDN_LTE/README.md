@@ -27,8 +27,9 @@ $ sudo apt-get install mysql-server
     $ sudo add-apt-repository ppa:webupd8team/java
     $ sudo apt-get update
     $ sudo apt-get install oracle-java8-installer
-    
-    //To automatically set Java 8 environment variables, install the following package:
+    ```
+    To automatically set Java 8 environment variables, install the following package:
+    ```
     $ sudo apt-get install oracle-java8-set-default
     ```
    
