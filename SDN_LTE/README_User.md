@@ -151,7 +151,7 @@ If you have a different port mapping, then you need to change the port numbers i
 
 3. Start the sink program by running the script *sink.sh*.
 
-    `$ sh sink.sh <sink_ip> <starting_port> <num_iperf3_servers>"`
+    `$ sh sink.sh <sink_ip> <starting_port> <num_iperf3_servers>`
 
 4. Start the RAN simulator using the following commands:
     ```
