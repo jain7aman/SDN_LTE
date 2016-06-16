@@ -1,7 +1,7 @@
 ## Assignment 1- File Server
 
 First assignment for course CS733, Spring-2015  
-Submitted by: Aman Jain, Roll: 143050020
+Submitted by: Aman Jain, Roll No. : 143050020
 
 ### Introduction
 * This is a single server listening on port 8080 for a versioned files to be stored and retrieved by the server 
